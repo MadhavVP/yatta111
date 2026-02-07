@@ -3,16 +3,15 @@ import numpy as np
 
 def process_image_to_fourier(image_path, num_coefficients=100):
     """
-    Reads an image, extracts the largest contour, performs FFT,
-    and returns a sorted list of Fourier coefficients.
+    Reads an image, finds all significant contours, sorts them spatially,
+    and returns a list of Fourier coefficient sets (one per contour).
     """
     # 1. Image Preprocessing
     img = cv2.imread(image_path, 0)
     if img is None:
         raise ValueError("Could not read image file.")
 
-    # Invert if the background is light (standard drawing) to make the drawing white (255)
-    # Using simple thresholding
+    # Invert to get white drawing on black
     _, thresh = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY_INV)
 
     # 2. Extract Contours
@@ -25,86 +24,90 @@ def process_image_to_fourier(image_path, num_coefficients=100):
     if not valid_contours:
         return []
 
-    # Sort checks to find a good starting point (e.g. largest)
-    # We want to visit all significant contours (like the dot on an 'i')
-    # Strategy: Greedy Nearest Neighbor path
-    
-    # Start with largest contour
-    # Find index of largest contour to safely remove
-    largest_idx = -1
-    max_area = -1
-    for i, c in enumerate(valid_contours):
-        area = cv2.contourArea(c)
-        if area > max_area:
-            max_area = area
-            largest_idx = i
-            
-    current_contour = valid_contours.pop(largest_idx)
-    
-    # Simplify first
-    epsilon = 0.002 * cv2.arcLength(current_contour, True)
-    approx = cv2.approxPolyDP(current_contour, epsilon, True)
-    final_points = approx.reshape(-1, 2)
-    
-    while valid_contours:
-        # Last point of current path
-        last_point = final_points[-1]
-        
-        # Find closest start point among remaining contours
-        best_dist = float('inf')
-        best_idx = -1
-        
-        for i, c in enumerate(valid_contours):
-            # Check distance to the first point of this contour
-            # (We could check all points and rotate the contour, but that's expensive.
-            #  Assuming contours are closed loops, start point is arbitrary but fixed.)
-            dist = np.linalg.norm(c[0][0] - last_point)
-            if dist < best_dist:
-                best_dist = dist
-                best_idx = i
-        
-        # Add the best match
-        next_c = valid_contours.pop(best_idx)
-        
-        # Simplify next contour
-        eps = 0.002 * cv2.arcLength(next_c, True)
-        approx_next = cv2.approxPolyDP(next_c, eps, True)
-        pts_next = approx_next.reshape(-1, 2)
-        
-        # Append (the "jump" will be handled by the Fourier Series as a fast transition)
-        final_points = np.vstack([final_points, pts_next])
-        
-    contour_points = final_points
+    # 3. Sort Contours Spatially (Simulation of Time)
+    # Sort Top-Left to Bottom-Right (y + x approx)
+    # Bounding box: (x, y, w, h)
+    def get_sort_key(c):
+        x, y, w, h = cv2.boundingRect(c)
+        return y + x * 0.1 # Weight Y more to simulate lines of text
 
-    # 3. Convert to Complex Plane (x + iy)
-    # In images, y increases downwards. In standard plotting, y increases upwards.
-    # We negate y to have it upright.
-    x = contour_points[:, 0]
-    y = -contour_points[:, 1]
-    complex_points = x + 1j * y
+    valid_contours.sort(key=get_sort_key)
+
+    all_coefficients = []
+
+    for contour in valid_contours:
+        # Simplify
+        epsilon = 0.002 * cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, epsilon, True)
+        points = approx.reshape(-1, 2)
+        
+        # For uploaded contours, they are usually closed loops.
+        # We don't strictly need to retrace them if they are already closed,
+        # but resampling is always good.
+        # However, `process_image` often extracts outlines.
+        # If it's a thin line drawing, the contour might be a double-back path already.
+        
+        coeffs = compute_fourier_coefficients(points, num_coefficients, is_closed_loop=True)
+        all_coefficients.append(coeffs)
+        
+    return all_coefficients
+
+def process_vectors_to_fourier(vector_data, num_coefficients=100):
+    """
+    Processes raw vector data (list of lists of {x,y}) from the frontend.
+    """
+    all_coefficients = []
     
-    # Center the drawing
+    for stroke in vector_data:
+        if len(stroke) < 3: continue
+        
+        # Convert to numpy array [[x, y], ...]
+        points = np.array([[p['x'], p['y']] for p in stroke])
+        
+        # Open strokes need retracing to be periodic
+        coeffs = compute_fourier_coefficients(points, num_coefficients, is_closed_loop=False)
+        all_coefficients.append(coeffs)
+        
+    return all_coefficients
+
+def compute_fourier_coefficients(points, num_coefficients, is_closed_loop=False):
+    """
+    Helper to calc DFT for a set of 2D points.
+    """
+    # 1. Resample (Uniform speed)
+    target_points = 1024 
+    points = resample_path(points, target_points)
+    
+    # 2. Retrace (if open)
+    if not is_closed_loop:
+        reversed_points = points[::-1]
+        points = np.vstack([points, reversed_points[1:-1]])
+        
+    # 3. Complex Plane
+    x = points[:, 0]
+    y = points[:, 1]
+    # Do NOT flip Y. 
+    # Image/Canvas: Y is Down.
+    # Frontend Sin: Y is Down.
+    # So we keep Y as is.
+    
+    complex_points = x + 1j * y
     complex_points = complex_points - np.mean(complex_points)
 
-    # 4. Compute DFT
+    # 4. DFT
     dft_result = np.fft.fft(complex_points)
     
-    # 5. Package Coefficients
-    # np.fft.fft returns frequencies in order: [0, 1, ..., N/2-1, -N/2, ..., -1]
-    # We need to preserve these specific frequencies.
+    # 5. Package
     coefficients = []
     N = len(dft_result)
     
     for k in range(N):
-        # Calculate the correct frequency index
         if k <= N / 2:
             freq = k
         else:
             freq = k - N
             
         val = dft_result[k]
-        
-        # Normalize amplitude by N (standard DFT normalization)
         radius = np.abs(val) / N
         phase = np.angle(val)
         
@@ -114,9 +117,29 @@ def process_image_to_fourier(image_path, num_coefficients=100):
             "phase": phase
         })
 
-    # 6. Sort by radius (Amplitude)
-    # We want to use the strongest components first for the approximation
     coefficients.sort(key=lambda x: x["radius"], reverse=True)
-
-    # Limit to requested number (or total if less)
     return coefficients[:min(len(coefficients), num_coefficients)]
+
+def resample_path(points, n_points):
+    """
+    Interpolates path to have `n_points` uniformly spaced.
+    """
+    if len(points) < 2:
+        return np.resize(points, (n_points, 2))
+
+    # Calculate cumulative distance
+    dists = np.sqrt(np.sum(np.diff(points, axis=0)**2, axis=1))
+    cum_dist = np.insert(np.cumsum(dists), 0, 0)
+    total_dist = cum_dist[-1]
+    
+    if total_dist == 0:
+        return np.resize(points, (n_points, 2))
+        
+    # Create uniform distances
+    uniform_dists = np.linspace(0, total_dist, n_points)
+    
+    # Interpolate X and Y
+    new_x = np.interp(uniform_dists, cum_dist, points[:, 0])
+    new_y = np.interp(uniform_dists, cum_dist, points[:, 1])
+    
+    return np.column_stack((new_x, new_y))

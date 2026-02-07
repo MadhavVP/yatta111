@@ -20,6 +20,27 @@
         --text-muted: #a0a0b0;
         --border: rgba(255, 255, 255, 0.1);
         --glass: blur(10px);
+        --canvas-bg: radial-gradient(
+          circle at center,
+          #1a1a20 0%,
+          #0f0f13 100%
+        );
+      }
+
+      [data-theme="light"] {
+        --bg-color: #f0f0f5;
+        --panel-bg: rgba(255, 255, 255, 0.8);
+        --accent: #7000ff;
+        --accent-hover: #8a2be2;
+        --text-main: #1a1a1a;
+        --text-muted: #555566;
+        --border: rgba(0, 0, 0, 0.1);
+        --glass: blur(10px);
+        --canvas-bg: radial-gradient(
+          circle at center,
+          #ffffff 0%,
+          #e0e0e5 100%
+        );
       }
 
       * {
@@ -35,6 +56,9 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        transition:
+          background-color 0.3s,
+          color 0.3s;
       }
 
       /* Layout */
@@ -57,6 +81,7 @@
         gap: 20px;
         z-index: 10;
         overflow-y: auto;
+        transition: background-color 0.3s;
       }
 
       .logo {
@@ -65,6 +90,23 @@
         color: var(--accent);
         margin-bottom: 10px;
         letter-spacing: -0.5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .theme-toggle {
+        font-size: 1.2rem;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--text-main);
+      }
+      .theme-toggle:hover {
+        opacity: 1;
       }
 
       .control-group {
@@ -87,9 +129,9 @@
       }
 
       input[type="number"] {
-        background: rgba(0, 0, 0, 0.3);
+        background: rgba(0, 0, 0, 0.1);
         border: 1px solid var(--border);
-        color: white;
+        color: var(--text-main);
         padding: 8px;
         border-radius: 6px;
         font-family: inherit;
@@ -114,16 +156,17 @@
       }
 
       button.secondary {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(128, 128, 128, 0.1);
+        color: var(--text-main);
       }
 
       button.secondary:hover {
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(128, 128, 128, 0.2);
       }
 
       .tabs {
         display: flex;
-        background: rgba(0, 0, 0, 0.2);
+        background: rgba(128, 128, 128, 0.1);
         padding: 4px;
         border-radius: 8px;
         margin-bottom: 10px;
@@ -142,7 +185,7 @@
 
       .tab.active {
         background: var(--panel-bg);
-        color: white;
+        color: var(--text-main);
         font-weight: 600;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
@@ -151,11 +194,7 @@
       .canvas-area {
         flex: 1;
         position: relative;
-        background-image: radial-gradient(
-          circle at center,
-          #1a1a20 0%,
-          #0f0f13 100%
-        );
+        background: var(--canvas-bg);
         display: flex;
         justify-content: center;
         align-items: center;
@@ -163,14 +202,15 @@
       }
 
       canvas {
-        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.2);
         border-radius: 4px;
         cursor: crosshair;
-        background: white; /* Default explicitly to white for drawing canvas */
+        background: white;
+        transition: box-shadow 0.3s;
       }
 
       #vizCanvas {
-        background: transparent; /* Visualization canvas is transparent */
+        background: transparent;
         pointer-events: none;
       }
 
@@ -186,7 +226,7 @@
         padding: 8px 16px;
         border-radius: 20px;
         font-size: 0.85rem;
-        color: var(--text-muted);
+        color: white;
         backdrop-filter: blur(4px);
         border: 1px solid var(--border);
         pointer-events: none;
@@ -202,7 +242,16 @@
   <body>
     <div class="app-container">
       <div class="sidebar">
-        <div class="logo">Antigravity Fourier</div>
+        <div class="logo">
+          Antigravity Fourier
+          <button
+            class="theme-toggle"
+            onclick="toggleTheme()"
+            title="Toggle Theme"
+          >
+            🌓
+          </button>
+        </div>
 
         <!-- Mode Selection -->
         <div class="tabs">
@@ -247,21 +296,23 @@
             type="range"
             id="armsInput"
             min="1"
-            max="300"
+            max="500"
             value="150"
             oninput="updateArms(this.value)"
           />
         </div>
 
         <div class="control-group">
-          <label>Speed (Period): <span id="speedVal">10s</span></label>
+          <label
+            >Speed (Period per stroke): <span id="speedVal">5s</span></label
+          >
           <input
             type="range"
             id="speedInput"
-            min="2"
-            max="60"
-            value="10"
-            step="1"
+            min="1"
+            max="20"
+            value="5"
+            step="0.5"
             oninput="updateSpeed(this.value)"
           />
         </div>
@@ -309,19 +360,30 @@
 
     <script>
       // State
-      let mode = "draw"; // 'draw' | 'upload' | 'visualize'
+      let mode = "draw";
       let isDrawing = false;
       let drawCtx, vizCtx;
-      let coefficients = [];
-      let allCoefficients = []; // Store all to allow slider adjustment
 
-      // Animation State
-      let time = 0;
+      // Drawing Data
+      let currentStroke = [];
+      let allStrokes = []; // List of strokes (list of points)
+
+      // Visualization State
+      let playlist = []; // List of coefficient lists
+      let currentTrack = 0; // Index of current contour being drawn
+
       let isAnimating = false;
-      let path = [];
+      let time = 0;
+      let path = []; // Path of CURRENT stroke
+      let completedPaths = []; // Paths of PREVIOUS strokes
+
       let lastFrameTime = 0;
-      let period = 10; // Seconds for one full cycle
+      let period = 5; // Seconds per stroke
       let zoom = 1;
+      let numArmsLimit = 150;
+
+      // Theme
+      let isDark = true;
 
       // DOM Elements
       const drawCanvas = document.getElementById("drawCanvas");
@@ -334,44 +396,61 @@
         vizCtx = vizCanvas.getContext("2d");
 
         // Setup Drawing Canvas
-        drawCtx.fillStyle = "white";
-        drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-        drawCtx.lineWidth = 3;
-        drawCtx.lineCap = "round";
-        drawCtx.strokeStyle = "black";
+        resetDrawCanvas();
 
         // Events
         drawCanvas.addEventListener("mousedown", startDrawing);
         drawCanvas.addEventListener("mousemove", draw);
-        drawCanvas.addEventListener("mouseup", stopDrawing);
-        drawCanvas.addEventListener("mouseout", stopDrawing);
+        window.addEventListener("mouseup", stopDrawing);
 
-        // Upload Input Listener
         document
           .getElementById("imageInput")
           .addEventListener("change", processUpload);
       };
 
+      function resetDrawCanvas() {
+        drawCtx.fillStyle = "white";
+        drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+        drawCtx.lineWidth = 3;
+        drawCtx.lineCap = "round";
+        drawCtx.strokeStyle = "black";
+        allStrokes = [];
+        currentStroke = [];
+      }
+
+      function toggleTheme() {
+        isDark = !isDark;
+        document.documentElement.setAttribute(
+          "data-theme",
+          isDark ? "dark" : "light",
+        );
+      }
+
       // --- Mode Switching ---
       function setMode(newMode) {
-        const drawTools = document.getElementById("drawTools");
-        const uploadTools = document.getElementById("uploadTools");
-        // Tabs UI
-        const tabs = document.querySelectorAll(".tab");
-        tabs.forEach((t) => t.classList.remove("active"));
+        try {
+          const drawTools = document.getElementById("drawTools");
+          const uploadTools = document.getElementById("uploadTools");
+          const tabs = document.querySelectorAll(".tab");
+          tabs.forEach((t) => t.classList.remove("active"));
 
-        if (newMode === "draw") {
-          tabs[0].classList.add("active");
-          drawTools.classList.remove("hidden");
-          uploadTools.classList.add("hidden");
+          mode = newMode;
 
-          stopAnimation();
-          drawCanvas.classList.remove("hidden");
-          vizCanvas.classList.add("hidden");
-        } else {
-          tabs[1].classList.add("active");
-          drawTools.classList.add("hidden");
-          uploadTools.classList.remove("hidden");
+          if (newMode === "draw") {
+            tabs[0].classList.add("active");
+            drawTools.classList.remove("hidden");
+            uploadTools.classList.add("hidden");
+
+            stopAnimation();
+            drawCanvas.classList.remove("hidden");
+            vizCanvas.classList.add("hidden");
+          } else {
+            tabs[1].classList.add("active");
+            drawTools.classList.add("hidden");
+            uploadTools.classList.remove("hidden");
+          }
+        } catch (e) {
+          console.error(e);
         }
       }
 
@@ -379,76 +458,98 @@
       function startDrawing(e) {
         if (mode !== "draw") return;
         isDrawing = true;
-        draw(e);
+        currentStroke = [];
+
+        const pt = getMousePos(e);
+        currentStroke.push(pt);
+
+        drawCtx.beginPath();
+        drawCtx.moveTo(pt.x, pt.y);
       }
 
       function draw(e) {
         if (!isDrawing) return;
-        const rect = drawCanvas.getBoundingClientRect();
-        // Adjust for canvas scaling if CSS changes size vs width/height attributes
-        // But here we use fixed 800x600 for simplicity and map mouse directly
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const pt = getMousePos(e);
+        currentStroke.push(pt); // Record point
 
-        drawCtx.lineTo(x, y);
+        drawCtx.lineTo(pt.x, pt.y);
         drawCtx.stroke();
-        drawCtx.beginPath();
-        drawCtx.moveTo(x, y);
       }
 
       function stopDrawing() {
+        if (!isDrawing) return;
         isDrawing = false;
-        drawCtx.beginPath();
+        drawCtx.closePath();
+
+        if (currentStroke.length > 2) {
+          allStrokes.push(currentStroke);
+        }
+        currentStroke = [];
+      }
+
+      function getMousePos(e) {
+        const rect = drawCanvas.getBoundingClientRect();
+        return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        };
       }
 
       function clearDrawing() {
-        drawCtx.fillStyle = "white";
-        drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-        drawCtx.beginPath(); // Reset any existing paths
+        resetDrawCanvas();
+        // Also clear visualization state
+        playlist = [];
+        completedPaths = [];
+        path = [];
+        currentTrack = 0;
+        time = 0;
+        isAnimating = false;
+
+        // Hide viz canvas if active
+        setMode("draw");
       }
 
       // --- Processing Logic ---
       async function processDrawing() {
-        showStatus("Calculating FFT...");
+        if (allStrokes.length === 0) {
+          alert("Draw something first!");
+          return;
+        }
+        showStatus("Calculating Vector FFT...");
 
-        // Convert canvas to blob
-        drawCanvas.toBlob(async (blob) => {
-          if (!blob) {
-            alert("Canvas error");
-            return;
-          }
-          // Create a File object
-          const file = new File([blob], "drawing.png", { type: "image/png" });
-          await sendFile(file);
-        }, "image/png");
+        await sendData({ strokes: allStrokes }, true);
       }
 
       async function processUpload() {
         const input = document.getElementById("imageInput");
-        if (!input.files[0]) {
-          return; // Waith for file selection
-        }
+        if (!input.files[0]) return;
+
         showStatus("Uploading & Processing...");
-        await sendFile(input.files[0]);
+
+        const formData = new FormData();
+        formData.append("drawing", input.files[0]);
+        await sendData(formData, false);
       }
 
-      async function sendFile(file) {
-        const formData = new FormData();
-        formData.append("drawing", file);
-
+      async function sendData(bodyData, isJson) {
         try {
+          const headers = { "X-CSRFToken": getCookie("csrftoken") };
+          if (isJson) {
+            headers["Content-Type"] = "application/json";
+            bodyData = JSON.stringify(bodyData);
+          }
+
           const response = await fetch("/process_upload/", {
             method: "POST",
-            body: formData,
-            headers: { "X-CSRFToken": getCookie("csrftoken") },
+            body: bodyData,
+            headers: headers,
           });
 
           if (!response.ok) throw new Error("Server Error");
 
           const result = await response.json();
           if (result.status === "success") {
-            allCoefficients = result.data;
-            // Start Visualization
+            playlist = result.data; // List of lists of coeffs
             startVisualization();
           } else {
             alert("Error: " + result.message);
@@ -467,10 +568,11 @@
         drawCanvas.classList.add("hidden");
         vizCanvas.classList.remove("hidden");
 
-        // Reset State
+        // Reset
+        currentTrack = 0;
         path = [];
+        completedPaths = []; // Clear old finished strokes
         time = 0;
-        updateArms(document.getElementById("armsInput").value);
 
         if (!isAnimating) {
           isAnimating = true;
@@ -486,20 +588,33 @@
       function animate(now) {
         if (!isAnimating) return;
 
-        // Calculate Delta Time in seconds
+        // Delta Time
         const dt = (now - lastFrameTime) / 1000;
         lastFrameTime = now;
 
-        // Update Time: 2PI per period
+        // Update Time
         const angularSpeed = (2 * Math.PI) / period;
         time += angularSpeed * dt;
 
-        // Wrap time for loop (optional, but good for precision)
-        // We can let it grow if we want path to "re-trace" exactly or spiral if freq is irrational (not here)
+        // Check if stroke finished
         if (time > 2 * Math.PI) {
-          time -= 2 * Math.PI;
-          // For visual smoothness, we might want to clear path here if it gets too long
-          // path = [];
+          // Stroke finished!
+          // Save current path to persistent list
+          if (path.length > 0) {
+            completedPaths.push([...path]);
+          }
+
+          // Move to next stroke
+          currentTrack++;
+          time = 0;
+          path = [];
+
+          // Check if playlist finished
+          if (currentTrack >= playlist.length) {
+            // Loop entire animation?
+            currentTrack = 0;
+            completedPaths = [];
+          }
         }
 
         renderFrame();
@@ -507,94 +622,110 @@
       }
 
       function renderFrame() {
-        // Clear Canvas
         vizCtx.clearRect(0, 0, vizCanvas.width, vizCanvas.height);
 
-        const cx = vizCanvas.width / 2;
-        const cy = vizCanvas.height / 2;
-
-        let x = cx;
-        let y = cy;
-
         const pathColor = document.getElementById("pathColor").value;
+        const trailColor = isDark
+          ? "rgba(255, 255, 255, 0.1)"
+          : "rgba(0, 0, 0, 0.1)";
+        const armColor = isDark
+          ? "rgba(255, 255, 255, 0.2)"
+          : "rgba(0, 0, 0, 0.2)";
 
-        // Compute Epicycles
-        coefficients.forEach((c) => {
-          const prevX = x;
-          const prevY = y;
-
-          const radius = c.radius * zoom;
-          const freq = c.freq;
-          const phase = c.phase;
-
-          // Angle = freq * time + phase
-          const angle = freq * time + phase;
-
-          x += radius * Math.cos(angle);
-          y += radius * Math.sin(angle);
-
-          // Only draw visible circles/arms
-          if (radius > 1) {
-            vizCtx.beginPath();
-            vizCtx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-            vizCtx.lineWidth = 1;
-            vizCtx.arc(prevX, prevY, radius, 0, 2 * Math.PI);
-            vizCtx.stroke(); // circle
-
-            vizCtx.beginPath();
-            vizCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-            vizCtx.moveTo(prevX, prevY);
-            vizCtx.lineTo(x, y);
-            vizCtx.stroke(); // arm
-          }
-        });
-
-        // Draw the tip
-        vizCtx.fillStyle = pathColor;
-        vizCtx.shadowBlur = 10;
-        vizCtx.shadowColor = pathColor;
-        vizCtx.beginPath();
-        vizCtx.arc(x, y, 4, 0, 2 * Math.PI);
-        vizCtx.fill();
-        vizCtx.shadowBlur = 0;
-
-        // Update Path
-        // Add to beginning or end?
-        // Let's add to end.
-        path.push({ x, y });
-
-        // Limit path
-        if (path.length > 4000) path.shift();
-
-        // Draw Path
+        // 1. Draw Completed Paths (Dead ink)
         vizCtx.strokeStyle = pathColor;
         vizCtx.lineWidth = 2;
-        vizCtx.beginPath();
+        vizCtx.globalAlpha = 0.6; // Slight fade for finished ink
 
-        if (path.length > 0) {
-          vizCtx.moveTo(path[0].x, path[0].y);
-          for (let i = 1; i < path.length; i++) {
-            // Skip if distance is huge (to avoid artifacts if time wraps poorly or we clear)
-            const dist = Math.hypot(
-              path[i].x - path[i - 1].x,
-              path[i].y - path[i - 1].y,
-            );
-            if (dist < 100) {
-              vizCtx.lineTo(path[i].x, path[i].y);
+        completedPaths.forEach((p) => {
+          if (p.length < 2) return;
+          vizCtx.beginPath();
+          vizCtx.moveTo(p[0].x, p[0].y);
+          for (let i = 1; i < p.length; i++) {
+            // Optimization: skip large jumps (retrace jumps are large in phase space, but small in screen space usually)
+            // Actually retrace is continuous. But wrapped time might jump.
+            if (Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y) < 100) {
+              vizCtx.lineTo(p[i].x, p[i].y);
             } else {
-              vizCtx.moveTo(path[i].x, path[i].y);
+              vizCtx.moveTo(p[i].x, p[i].y);
             }
           }
+          vizCtx.stroke();
+        });
+        vizCtx.globalAlpha = 1.0;
+
+        // 2. Animate Current Stroke
+        if (currentTrack < playlist.length) {
+          const coeffs = playlist[currentTrack].slice(0, numArmsLimit);
+
+          const cx = vizCanvas.width / 2;
+          const cy = vizCanvas.height / 2;
+
+          let x = cx;
+          let y = cy;
+
+          // Epicycles
+          coeffs.forEach((c) => {
+            const prevX = x;
+            const prevY = y;
+            const radius = c.radius * zoom;
+            const angle = c.freq * time + c.phase;
+
+            x += radius * Math.cos(angle);
+            y += radius * Math.sin(angle);
+
+            // Draw Arm
+            if (radius > 1) {
+              vizCtx.beginPath();
+              vizCtx.strokeStyle = trailColor;
+              vizCtx.arc(prevX, prevY, radius, 0, 2 * Math.PI);
+              vizCtx.stroke();
+
+              vizCtx.beginPath();
+              vizCtx.strokeStyle = armColor;
+              vizCtx.moveTo(prevX, prevY);
+              vizCtx.lineTo(x, y);
+              vizCtx.stroke();
+            }
+          });
+
+          // Tip
+          vizCtx.fillStyle = pathColor;
+          vizCtx.beginPath();
+          vizCtx.arc(x, y, 4, 0, 2 * Math.PI);
+          vizCtx.fill();
+
+          // Add to current Path
+          path.push({ x, y });
+          if (path.length > 5000) path.shift();
+
+          // Draw Current Path
+          vizCtx.strokeStyle = pathColor;
+          vizCtx.lineWidth = 2;
+          vizCtx.beginPath();
+          if (path.length > 0) {
+            vizCtx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+              if (
+                Math.hypot(
+                  path[i].x - path[i - 1].x,
+                  path[i].y - path[i - 1].y,
+                ) < 100
+              ) {
+                vizCtx.lineTo(path[i].x, path[i].y);
+              } else {
+                vizCtx.moveTo(path[i].x, path[i].y);
+              }
+            }
+          }
+          vizCtx.stroke();
         }
-        vizCtx.stroke();
       }
 
       // --- Controls ---
       function updateArms(val) {
         document.getElementById("armsVal").innerText = val;
-        if (allCoefficients.length > 0) {
-          coefficients = allCoefficients.slice(0, parseInt(val));
-        }
+        numArmsLimit = parseInt(val);
       }
 
       function updateSpeed(val) {
@@ -608,11 +739,13 @@
       }
 
       function showStatus(msg) {
-        statusPill.innerText = msg;
-        statusPill.classList.add("visible");
+        if (statusPill) {
+          statusPill.innerText = msg;
+          statusPill.classList.add("visible");
+        }
       }
       function hideStatus() {
-        statusPill.classList.remove("visible");
+        if (statusPill) statusPill.classList.remove("visible");
       }
 
       // Helper for CSRF token
