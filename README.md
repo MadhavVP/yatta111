@@ -30,3 +30,9 @@ Then open your browser to `http://127.0.0.1:8000/`.
 - Django
 - OpenCV
 - NumPy
+
+### Important Files
+
+- `visualizer/utils.py`: Contains the logic for processing the image and performing the Fourier Transform.
+- `visualizer/views.py`: Contains the logic for the web server and handling requests.
+- `visualizer/templates/index.html`: Contains the frontend code for the web server.
