@@ -18,7 +18,7 @@ def process_upload(request):
 
         try:
             # Run the math!
-            coeffs = process_image_to_fourier(file_path, num_coefficients=150)
+            coeffs = process_image_to_fourier(file_path, num_coefficients=500)
             
             # Cleanup: Delete the file after processing to save space
             fs.delete(filename)

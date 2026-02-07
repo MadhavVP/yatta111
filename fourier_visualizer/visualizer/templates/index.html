@@ -1,126 +1,621 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <title>Fourier Series Visualizer</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fourier Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
+      :root {
+        --bg-color: #0f0f13;
+        --panel-bg: rgba(30, 30, 40, 0.7);
+        --accent: #7000ff;
+        --accent-hover: #8a2be2;
+        --text-main: #ffffff;
+        --text-muted: #a0a0b0;
+        --border: rgba(255, 255, 255, 0.1);
+        --glass: blur(10px);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        background: #1a1a1a;
+        margin: 0;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        font-family: "Outfit", sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Layout */
+      .app-container {
+        display: flex;
+        flex: 1;
+        height: 100%;
+        position: relative;
+      }
+
+      /* Sidebar Controls */
+      .sidebar {
+        width: 320px;
+        background: var(--panel-bg);
+        backdrop-filter: var(--glass);
+        border-right: 1px solid var(--border);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        z-index: 10;
+        overflow-y: auto;
+      }
+
+      .logo {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--accent);
+        margin-bottom: 10px;
+        letter-spacing: -0.5px;
+      }
+
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-weight: 400;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+        background: transparent;
+        cursor: pointer;
+      }
+
+      input[type="number"] {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--border);
         color: white;
-        font-family: sans-serif;
+        padding: 8px;
+        border-radius: 6px;
+        font-family: inherit;
       }
-      canvas {
-        border: 1px solid #333;
-        display: block;
-        margin: 20px auto;
+
+      button {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        font-family: inherit;
       }
-      #controls {
+
+      button:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(138, 43, 226, 0.3);
+      }
+
+      button.secondary {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      button.secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .tabs {
+        display: flex;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 4px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+      }
+
+      .tab {
+        flex: 1;
         text-align: center;
-        margin-top: 20px;
+        padding: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        border-radius: 6px;
+        color: var(--text-muted);
+        transition: 0.2s;
+      }
+
+      .tab.active {
+        background: var(--panel-bg);
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Main Canvas Area */
+      .canvas-area {
+        flex: 1;
+        position: relative;
+        background-image: radial-gradient(
+          circle at center,
+          #1a1a20 0%,
+          #0f0f13 100%
+        );
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      canvas {
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        border-radius: 4px;
+        cursor: crosshair;
+        background: white; /* Default explicitly to white for drawing canvas */
+      }
+
+      #vizCanvas {
+        background: transparent; /* Visualization canvas is transparent */
+        pointer-events: none;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .status-pill {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        backdrop-filter: blur(4px);
+        border: 1px solid var(--border);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s;
+        z-index: 100;
+      }
+      .status-pill.visible {
+        opacity: 1;
       }
     </style>
   </head>
   <body>
-    <div id="controls">
-      <input type="file" id="imageInput" accept="image/*" />
-      <button onclick="uploadAndVisualize()">Visualize</button>
+    <div class="app-container">
+      <div class="sidebar">
+        <div class="logo">Antigravity Fourier</div>
+
+        <!-- Mode Selection -->
+        <div class="tabs">
+          <div class="tab active" onclick="setMode('draw')">Draw</div>
+          <div class="tab" onclick="setMode('upload')">Upload</div>
+        </div>
+
+        <!-- Draw Tools -->
+        <div id="drawTools" class="control-group">
+          <label>Drawing Actions</label>
+          <button class="secondary" onclick="clearDrawing()">
+            Clear Canvas
+          </button>
+          <button onclick="processDrawing()">✨ Visualize Drawing</button>
+        </div>
+
+        <!-- Upload Tools -->
+        <div id="uploadTools" class="control-group hidden">
+          <label>Upload Image</label>
+          <input
+            type="file"
+            id="imageInput"
+            accept="image/*"
+            style="font-size: 0.8rem; color: var(--text-muted)"
+          />
+          <button onclick="processUpload()">✨ Visualize File</button>
+        </div>
+
+        <hr
+          style="
+            border: 0;
+            border-top: 1px solid var(--border);
+            width: 100%;
+            margin: 10px 0;
+          "
+        />
+
+        <!-- Visualization Controls -->
+        <div class="control-group">
+          <label>Number of Epicycles: <span id="armsVal">150</span></label>
+          <input
+            type="range"
+            id="armsInput"
+            min="1"
+            max="300"
+            value="150"
+            oninput="updateArms(this.value)"
+          />
+        </div>
+
+        <div class="control-group">
+          <label>Speed (Period): <span id="speedVal">10s</span></label>
+          <input
+            type="range"
+            id="speedInput"
+            min="2"
+            max="60"
+            value="10"
+            step="1"
+            oninput="updateSpeed(this.value)"
+          />
+        </div>
+
+        <div class="control-group">
+          <label>Zoom</label>
+          <input
+            type="range"
+            id="zoomInput"
+            min="0.5"
+            max="5"
+            step="0.1"
+            value="1"
+            oninput="updateZoom(this.value)"
+          />
+        </div>
+
+        <div class="control-group">
+          <label>Path Color</label>
+          <input
+            type="color"
+            id="pathColor"
+            value="#7000ff"
+            style="
+              width: 100%;
+              height: 40px;
+              border: none;
+              cursor: pointer;
+              background: transparent;
+            "
+          />
+        </div>
+      </div>
+
+      <div class="canvas-area" id="canvasContainer">
+        <div id="statusPill" class="status-pill">Processing...</div>
+
+        <!-- Drawing Canvas -->
+        <canvas id="drawCanvas" width="800" height="600"></canvas>
+
+        <!-- Visualization Canvas (Hidden initially) -->
+        <canvas id="vizCanvas" width="800" height="600" class="hidden"></canvas>
+      </div>
     </div>
 
-    <canvas id="canvas" width="800" height="600"></canvas>
-
     <script>
+      // State
+      let mode = "draw"; // 'draw' | 'upload' | 'visualize'
+      let isDrawing = false;
+      let drawCtx, vizCtx;
       let coefficients = [];
-      let path = [];
+      let allCoefficients = []; // Store all to allow slider adjustment
+
+      // Animation State
       let time = 0;
-      const canvas = document.getElementById("canvas");
-      const ctx = canvas.getContext("2d");
+      let isAnimating = false;
+      let path = [];
+      let lastFrameTime = 0;
+      let period = 10; // Seconds for one full cycle
+      let zoom = 1;
 
-      // Offset to center the drawing on canvas
-      const CENTER_X = canvas.width / 2;
-      const CENTER_Y = canvas.height / 2;
+      // DOM Elements
+      const drawCanvas = document.getElementById("drawCanvas");
+      const vizCanvas = document.getElementById("vizCanvas");
+      const statusPill = document.getElementById("statusPill");
 
-      async function uploadAndVisualize() {
-        const input = document.getElementById("imageInput");
-        if (!input.files[0]) return;
+      // Init
+      window.onload = () => {
+        drawCtx = drawCanvas.getContext("2d");
+        vizCtx = vizCanvas.getContext("2d");
 
-        const formData = new FormData();
-        formData.append("drawing", input.files[0]);
+        // Setup Drawing Canvas
+        drawCtx.fillStyle = "white";
+        drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+        drawCtx.lineWidth = 3;
+        drawCtx.lineCap = "round";
+        drawCtx.strokeStyle = "black";
 
-        // Fetch data from Django
-        const response = await fetch("/process_upload/", {
-          method: "POST",
-          body: formData,
-          headers: { "X-CSRFToken": getCookie("csrftoken") },
-        });
+        // Events
+        drawCanvas.addEventListener("mousedown", startDrawing);
+        drawCanvas.addEventListener("mousemove", draw);
+        drawCanvas.addEventListener("mouseup", stopDrawing);
+        drawCanvas.addEventListener("mouseout", stopDrawing);
 
-        const result = await response.json();
-        if (result.status === "success") {
-          coefficients = result.data;
-          path = [];
-          time = 0;
-          animate();
+        // Upload Input Listener
+        document
+          .getElementById("imageInput")
+          .addEventListener("change", processUpload);
+      };
+
+      // --- Mode Switching ---
+      function setMode(newMode) {
+        const drawTools = document.getElementById("drawTools");
+        const uploadTools = document.getElementById("uploadTools");
+        // Tabs UI
+        const tabs = document.querySelectorAll(".tab");
+        tabs.forEach((t) => t.classList.remove("active"));
+
+        if (newMode === "draw") {
+          tabs[0].classList.add("active");
+          drawTools.classList.remove("hidden");
+          uploadTools.classList.add("hidden");
+
+          stopAnimation();
+          drawCanvas.classList.remove("hidden");
+          vizCanvas.classList.add("hidden");
+        } else {
+          tabs[1].classList.add("active");
+          drawTools.classList.add("hidden");
+          uploadTools.classList.remove("hidden");
         }
       }
 
-      function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // --- Drawing Logic ---
+      function startDrawing(e) {
+        if (mode !== "draw") return;
+        isDrawing = true;
+        draw(e);
+      }
 
-        // Calculate the end point of the rotating arms
-        let x = CENTER_X;
-        let y = CENTER_Y;
+      function draw(e) {
+        if (!isDrawing) return;
+        const rect = drawCanvas.getBoundingClientRect();
+        // Adjust for canvas scaling if CSS changes size vs width/height attributes
+        // But here we use fixed 800x600 for simplicity and map mouse directly
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-        // Draw Epicycles
-        coefficients.forEach((c) => {
-          let prevX = x;
-          let prevY = y;
+        drawCtx.lineTo(x, y);
+        drawCtx.stroke();
+        drawCtx.beginPath();
+        drawCtx.moveTo(x, y);
+      }
 
-          let freq = c.freq;
-          let radius = c.radius;
-          let phase = c.phase;
+      function stopDrawing() {
+        isDrawing = false;
+        drawCtx.beginPath();
+      }
 
-          // Compute new tip location
-          // theta = freq * time + phase
-          let theta = freq * time + phase;
-          x += radius * Math.cos(theta);
-          y += radius * Math.sin(theta);
+      function clearDrawing() {
+        drawCtx.fillStyle = "white";
+        drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+        drawCtx.beginPath(); // Reset any existing paths
+      }
 
-          // Draw the arm
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-          ctx.beginPath();
-          ctx.moveTo(prevX, prevY);
-          ctx.lineTo(x, y);
-          ctx.stroke();
+      // --- Processing Logic ---
+      async function processDrawing() {
+        showStatus("Calculating FFT...");
 
-          // Draw the circle
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-          ctx.beginPath();
-          ctx.arc(prevX, prevY, radius, 0, 2 * Math.PI);
-          ctx.stroke();
-        });
+        // Convert canvas to blob
+        drawCanvas.toBlob(async (blob) => {
+          if (!blob) {
+            alert("Canvas error");
+            return;
+          }
+          // Create a File object
+          const file = new File([blob], "drawing.png", { type: "image/png" });
+          await sendFile(file);
+        }, "image/png");
+      }
 
-        // Store and Draw the Path
-        path.unshift({ x, y });
-
-        ctx.strokeStyle = "#00ffcc";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        if (path.length > 0) ctx.moveTo(path[0].x, path[0].y);
-
-        for (let i = 1; i < path.length; i++) {
-          ctx.lineTo(path[i].x, path[i].y);
+      async function processUpload() {
+        const input = document.getElementById("imageInput");
+        if (!input.files[0]) {
+          return; // Waith for file selection
         }
-        ctx.stroke();
+        showStatus("Uploading & Processing...");
+        await sendFile(input.files[0]);
+      }
 
-        // Limit path length to avoid memory issues if running forever
-        if (path.length > 2000) path.pop();
+      async function sendFile(file) {
+        const formData = new FormData();
+        formData.append("drawing", file);
 
-        // Increment time
-        const dt = (2 * Math.PI) / coefficients.length;
-        time += dt;
+        try {
+          const response = await fetch("/process_upload/", {
+            method: "POST",
+            body: formData,
+            headers: { "X-CSRFToken": getCookie("csrftoken") },
+          });
 
+          if (!response.ok) throw new Error("Server Error");
+
+          const result = await response.json();
+          if (result.status === "success") {
+            allCoefficients = result.data;
+            // Start Visualization
+            startVisualization();
+          } else {
+            alert("Error: " + result.message);
+            hideStatus();
+          }
+        } catch (e) {
+          console.error(e);
+          alert("Network error occurred.");
+          hideStatus();
+        }
+      }
+
+      // --- Visualization Logic ---
+      function startVisualization() {
+        hideStatus();
+        drawCanvas.classList.add("hidden");
+        vizCanvas.classList.remove("hidden");
+
+        // Reset State
+        path = [];
+        time = 0;
+        updateArms(document.getElementById("armsInput").value);
+
+        if (!isAnimating) {
+          isAnimating = true;
+          lastFrameTime = performance.now();
+          requestAnimationFrame(animate);
+        }
+      }
+
+      function stopAnimation() {
+        isAnimating = false;
+      }
+
+      function animate(now) {
+        if (!isAnimating) return;
+
+        // Calculate Delta Time in seconds
+        const dt = (now - lastFrameTime) / 1000;
+        lastFrameTime = now;
+
+        // Update Time: 2PI per period
+        const angularSpeed = (2 * Math.PI) / period;
+        time += angularSpeed * dt;
+
+        // Wrap time for loop (optional, but good for precision)
+        // We can let it grow if we want path to "re-trace" exactly or spiral if freq is irrational (not here)
+        if (time > 2 * Math.PI) {
+          time -= 2 * Math.PI;
+          // For visual smoothness, we might want to clear path here if it gets too long
+          // path = [];
+        }
+
+        renderFrame();
         requestAnimationFrame(animate);
       }
 
-      // Helper for CSRF token (Django specific)
+      function renderFrame() {
+        // Clear Canvas
+        vizCtx.clearRect(0, 0, vizCanvas.width, vizCanvas.height);
+
+        const cx = vizCanvas.width / 2;
+        const cy = vizCanvas.height / 2;
+
+        let x = cx;
+        let y = cy;
+
+        const pathColor = document.getElementById("pathColor").value;
+
+        // Compute Epicycles
+        coefficients.forEach((c) => {
+          const prevX = x;
+          const prevY = y;
+
+          const radius = c.radius * zoom;
+          const freq = c.freq;
+          const phase = c.phase;
+
+          // Angle = freq * time + phase
+          const angle = freq * time + phase;
+
+          x += radius * Math.cos(angle);
+          y += radius * Math.sin(angle);
+
+          // Only draw visible circles/arms
+          if (radius > 1) {
+            vizCtx.beginPath();
+            vizCtx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+            vizCtx.lineWidth = 1;
+            vizCtx.arc(prevX, prevY, radius, 0, 2 * Math.PI);
+            vizCtx.stroke(); // circle
+
+            vizCtx.beginPath();
+            vizCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+            vizCtx.moveTo(prevX, prevY);
+            vizCtx.lineTo(x, y);
+            vizCtx.stroke(); // arm
+          }
+        });
+
+        // Draw the tip
+        vizCtx.fillStyle = pathColor;
+        vizCtx.shadowBlur = 10;
+        vizCtx.shadowColor = pathColor;
+        vizCtx.beginPath();
+        vizCtx.arc(x, y, 4, 0, 2 * Math.PI);
+        vizCtx.fill();
+        vizCtx.shadowBlur = 0;
+
+        // Update Path
+        // Add to beginning or end?
+        // Let's add to end.
+        path.push({ x, y });
+
+        // Limit path
+        if (path.length > 4000) path.shift();
+
+        // Draw Path
+        vizCtx.strokeStyle = pathColor;
+        vizCtx.lineWidth = 2;
+        vizCtx.beginPath();
+
+        if (path.length > 0) {
+          vizCtx.moveTo(path[0].x, path[0].y);
+          for (let i = 1; i < path.length; i++) {
+            // Skip if distance is huge (to avoid artifacts if time wraps poorly or we clear)
+            const dist = Math.hypot(
+              path[i].x - path[i - 1].x,
+              path[i].y - path[i - 1].y,
+            );
+            if (dist < 100) {
+              vizCtx.lineTo(path[i].x, path[i].y);
+            } else {
+              vizCtx.moveTo(path[i].x, path[i].y);
+            }
+          }
+        }
+        vizCtx.stroke();
+      }
+
+      // --- Controls ---
+      function updateArms(val) {
+        document.getElementById("armsVal").innerText = val;
+        if (allCoefficients.length > 0) {
+          coefficients = allCoefficients.slice(0, parseInt(val));
+        }
+      }
+
+      function updateSpeed(val) {
+        document.getElementById("speedVal").innerText = val + "s";
+        period = parseFloat(val);
+      }
+
+      function updateZoom(val) {
+        zoom = parseFloat(val);
+        path = []; // Clear path because scale changed
+      }
+
+      function showStatus(msg) {
+        statusPill.innerText = msg;
+        statusPill.classList.add("visible");
+      }
+      function hideStatus() {
+        statusPill.classList.remove("visible");
+      }
+
+      // Helper for CSRF token
       function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== "") {
