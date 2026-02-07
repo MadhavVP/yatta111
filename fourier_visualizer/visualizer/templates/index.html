@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Fourier Series Visualizer</title>
+    <style>
+      body {
+        background: #1a1a1a;
+        color: white;
+        font-family: sans-serif;
+      }
+      canvas {
+        border: 1px solid #333;
+        display: block;
+        margin: 20px auto;
+      }
+      #controls {
+        text-align: center;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      <input type="file" id="imageInput" accept="image/*" />
+      <button onclick="uploadAndVisualize()">Visualize</button>
+    </div>
+
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <script>
+      let coefficients = [];
+      let path = [];
+      let time = 0;
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Offset to center the drawing on canvas
+      const CENTER_X = canvas.width / 2;
+      const CENTER_Y = canvas.height / 2;
+
+      async function uploadAndVisualize() {
+        const input = document.getElementById("imageInput");
+        if (!input.files[0]) return;
+
+        const formData = new FormData();
+        formData.append("drawing", input.files[0]);
+
+        // Fetch data from Django
+        const response = await fetch("/process_upload/", {
+          method: "POST",
+          body: formData,
+          headers: { "X-CSRFToken": getCookie("csrftoken") },
+        });
+
+        const result = await response.json();
+        if (result.status === "success") {
+          coefficients = result.data;
+          path = [];
+          time = 0;
+          animate();
+        }
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Calculate the end point of the rotating arms
+        let x = CENTER_X;
+        let y = CENTER_Y;
+
+        // Draw Epicycles
+        coefficients.forEach((c) => {
+          let prevX = x;
+          let prevY = y;
+
+          let freq = c.freq;
+          let radius = c.radius;
+          let phase = c.phase;
+
+          // Compute new tip location
+          // theta = freq * time + phase
+          let theta = freq * time + phase;
+          x += radius * Math.cos(theta);
+          y += radius * Math.sin(theta);
+
+          // Draw the arm
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+          ctx.beginPath();
+          ctx.moveTo(prevX, prevY);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+
+          // Draw the circle
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+          ctx.beginPath();
+          ctx.arc(prevX, prevY, radius, 0, 2 * Math.PI);
+          ctx.stroke();
+        });
+
+        // Store and Draw the Path
+        path.unshift({ x, y });
+
+        ctx.strokeStyle = "#00ffcc";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        if (path.length > 0) ctx.moveTo(path[0].x, path[0].y);
+
+        for (let i = 1; i < path.length; i++) {
+          ctx.lineTo(path[i].x, path[i].y);
+        }
+        ctx.stroke();
+
+        // Limit path length to avoid memory issues if running forever
+        if (path.length > 2000) path.pop();
+
+        // Increment time
+        const dt = (2 * Math.PI) / coefficients.length;
+        time += dt;
+
+        requestAnimationFrame(animate);
+      }
+
+      // Helper for CSRF token (Django specific)
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+          const cookies = document.cookie.split(";");
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === name + "=") {
+              cookieValue = decodeURIComponent(
+                cookie.substring(name.length + 1),
+              );
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+    </script>
+  </body>
+</html>
