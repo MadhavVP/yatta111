@@ -331,6 +331,13 @@
         </div>
 
         <div class="control-group">
+          <label>Camera</label>
+          <button id="followBtn" class="secondary" onclick="toggleFollow()">
+            Follow Pen: OFF
+          </button>
+        </div>
+
+        <div class="control-group">
           <label>Path Color</label>
           <input
             type="color"
@@ -374,13 +381,20 @@
 
       let isAnimating = false;
       let time = 0;
-      let path = []; // Path of CURRENT stroke
-      let completedPaths = []; // Paths of PREVIOUS strokes
+      let path = []; // Path of CURRENT stroke (World Coords)
+      let completedPaths = []; // Paths of PREVIOUS strokes (World Coords)
 
       let lastFrameTime = 0;
       let period = 5; // Seconds per stroke
-      let zoom = 1;
       let numArmsLimit = 150;
+
+      // Camera State
+      let camera = {
+        x: 0,
+        y: 0,
+        zoom: 1,
+        following: false,
+      };
 
       // Theme
       let isDark = true;
@@ -448,6 +462,7 @@
             tabs[1].classList.add("active");
             drawTools.classList.add("hidden");
             uploadTools.classList.remove("hidden");
+            // Upload mode automatically shows viz when ready
           }
         } catch (e) {
           console.error(e);
@@ -504,6 +519,10 @@
         currentTrack = 0;
         time = 0;
         isAnimating = false;
+
+        // Reset Camera
+        camera.x = 0;
+        camera.y = 0;
 
         // Hide viz canvas if active
         setMode("draw");
@@ -568,11 +587,15 @@
         drawCanvas.classList.add("hidden");
         vizCanvas.classList.remove("hidden");
 
-        // Reset
+        // Reset Animation State
         currentTrack = 0;
         path = [];
-        completedPaths = []; // Clear old finished strokes
+        completedPaths = [];
         time = 0;
+
+        // Reset Camera
+        camera.x = 0;
+        camera.y = 0;
 
         if (!isAnimating) {
           isAnimating = true;
@@ -621,6 +644,16 @@
         requestAnimationFrame(animate);
       }
 
+      // --- Coordinate Transform Helper ---
+      function toScreen(worldX, worldY) {
+        const cx = vizCanvas.width / 2;
+        const cy = vizCanvas.height / 2;
+        return {
+          x: (worldX - camera.x) * camera.zoom + cx,
+          y: (worldY - camera.y) * camera.zoom + cy,
+        };
+      }
+
       function renderFrame() {
         vizCtx.clearRect(0, 0, vizCanvas.width, vizCanvas.height);
 
@@ -632,7 +665,53 @@
           ? "rgba(255, 255, 255, 0.2)"
           : "rgba(0, 0, 0, 0.2)";
 
-        // 1. Draw Completed Paths (Dead ink)
+        // 1. Calculate Current Pen Position (World Coords)
+        let penX = 0;
+        let penY = 0;
+        let epicycles = [];
+
+        if (currentTrack < playlist.length) {
+          const coeffs = playlist[currentTrack].slice(0, numArmsLimit);
+
+          // Start at Origin (0,0) in World Space
+          let x = 0;
+          let y = 0;
+
+          coeffs.forEach((c) => {
+            const prevX = x;
+            const prevY = y;
+            const radius = c.radius;
+            const angle = c.freq * time + c.phase;
+
+            x += radius * Math.cos(angle);
+            y += radius * Math.sin(angle);
+
+            epicycles.push({ prevX, prevY, x, y, radius });
+          });
+
+          penX = x;
+          penY = y;
+
+          // Add to current Path
+          path.push({ x: penX, y: penY });
+          if (path.length > 5000) path.shift();
+        }
+
+        // 2. Update Camera
+        if (camera.following) {
+          // Smoothly interpolate camera to pen position
+          const lerpFactor = 0.1;
+          camera.x += (penX - camera.x) * lerpFactor;
+          camera.y += (penY - camera.y) * lerpFactor;
+        } else {
+          // Center on origin (0,0)
+          // We can just keep it at 0,0 or smooth back
+          const lerpFactor = 0.05;
+          camera.x += (0 - camera.x) * lerpFactor;
+          camera.y += (0 - camera.y) * lerpFactor;
+        }
+
+        // 3. Draw Completed Paths (Dead ink)
         vizCtx.strokeStyle = pathColor;
         vizCtx.lineWidth = 2;
         vizCtx.globalAlpha = 0.6; // Slight fade for finished ink
@@ -640,85 +719,83 @@
         completedPaths.forEach((p) => {
           if (p.length < 2) return;
           vizCtx.beginPath();
-          vizCtx.moveTo(p[0].x, p[0].y);
+
+          const start = toScreen(p[0].x, p[0].y);
+          vizCtx.moveTo(start.x, start.y);
+
           for (let i = 1; i < p.length; i++) {
-            // Optimization: skip large jumps (retrace jumps are large in phase space, but small in screen space usually)
-            // Actually retrace is continuous. But wrapped time might jump.
-            if (Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y) < 100) {
-              vizCtx.lineTo(p[i].x, p[i].y);
+            // Optimization: skip large jumps in World Space (retrace jumps)
+            const dist = Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y);
+            const screenPt = toScreen(p[i].x, p[i].y);
+
+            // Threshold in World Units! (approx 100 pixels in default zoom)
+            if (dist < 100) {
+              vizCtx.lineTo(screenPt.x, screenPt.y);
             } else {
-              vizCtx.moveTo(p[i].x, p[i].y);
+              vizCtx.moveTo(screenPt.x, screenPt.y);
             }
           }
           vizCtx.stroke();
         });
         vizCtx.globalAlpha = 1.0;
 
-        // 2. Animate Current Stroke
+        // 4. Draw Current Path
+        if (path.length > 0) {
+          vizCtx.strokeStyle = pathColor;
+          vizCtx.lineWidth = 2;
+          vizCtx.beginPath();
+
+          const start = toScreen(path[0].x, path[0].y);
+          vizCtx.moveTo(start.x, start.y);
+
+          for (let i = 1; i < path.length; i++) {
+            const dist = Math.hypot(
+              path[i].x - path[i - 1].x,
+              path[i].y - path[i - 1].y,
+            );
+            const screenPt = toScreen(path[i].x, path[i].y);
+
+            if (dist < 100) {
+              vizCtx.lineTo(screenPt.x, screenPt.y);
+            } else {
+              vizCtx.moveTo(screenPt.x, screenPt.y);
+            }
+          }
+          vizCtx.stroke();
+        }
+
+        // 5. Draw Epicycles & Pen
         if (currentTrack < playlist.length) {
-          const coeffs = playlist[currentTrack].slice(0, numArmsLimit);
+          epicycles.forEach((c) => {
+            // Optimization: Don't draw tiny circles if zoomed out
+            // Screen radius
+            const screenRadius = c.radius * camera.zoom;
+            if (screenRadius < 0.5) return;
 
-          const cx = vizCanvas.width / 2;
-          const cy = vizCanvas.height / 2;
+            const center = toScreen(c.prevX, c.prevY);
+            const tip = toScreen(c.x, c.y);
 
-          let x = cx;
-          let y = cy;
+            vizCtx.beginPath();
+            vizCtx.strokeStyle = trailColor;
+            vizCtx.arc(center.x, center.y, screenRadius, 0, 2 * Math.PI);
+            vizCtx.stroke();
 
-          // Epicycles
-          coeffs.forEach((c) => {
-            const prevX = x;
-            const prevY = y;
-            const radius = c.radius * zoom;
-            const angle = c.freq * time + c.phase;
-
-            x += radius * Math.cos(angle);
-            y += radius * Math.sin(angle);
-
-            // Draw Arm
-            if (radius > 1) {
-              vizCtx.beginPath();
-              vizCtx.strokeStyle = trailColor;
-              vizCtx.arc(prevX, prevY, radius, 0, 2 * Math.PI);
-              vizCtx.stroke();
-
+            // Draw Arm Line always? Or just large ones?
+            if (screenRadius > 2) {
               vizCtx.beginPath();
               vizCtx.strokeStyle = armColor;
-              vizCtx.moveTo(prevX, prevY);
-              vizCtx.lineTo(x, y);
+              vizCtx.moveTo(center.x, center.y);
+              vizCtx.lineTo(tip.x, tip.y);
               vizCtx.stroke();
             }
           });
 
-          // Tip
+          // Pen Tip
+          const penScreen = toScreen(penX, penY);
           vizCtx.fillStyle = pathColor;
           vizCtx.beginPath();
-          vizCtx.arc(x, y, 4, 0, 2 * Math.PI);
+          vizCtx.arc(penScreen.x, penScreen.y, 4, 0, 2 * Math.PI);
           vizCtx.fill();
-
-          // Add to current Path
-          path.push({ x, y });
-          if (path.length > 5000) path.shift();
-
-          // Draw Current Path
-          vizCtx.strokeStyle = pathColor;
-          vizCtx.lineWidth = 2;
-          vizCtx.beginPath();
-          if (path.length > 0) {
-            vizCtx.moveTo(path[0].x, path[0].y);
-            for (let i = 1; i < path.length; i++) {
-              if (
-                Math.hypot(
-                  path[i].x - path[i - 1].x,
-                  path[i].y - path[i - 1].y,
-                ) < 100
-              ) {
-                vizCtx.lineTo(path[i].x, path[i].y);
-              } else {
-                vizCtx.moveTo(path[i].x, path[i].y);
-              }
-            }
-          }
-          vizCtx.stroke();
         }
       }
 
@@ -734,8 +811,20 @@
       }
 
       function updateZoom(val) {
-        zoom = parseFloat(val);
-        path = []; // Clear path because scale changed
+        // Logarithmic zoom feel?
+        // normalized 0.5 to 5 is fine for now
+        camera.zoom = parseFloat(val);
+        // Do NOT clear path! We want to see it just zoomed.
+      }
+
+      function toggleFollow() {
+        camera.following = !camera.following;
+        const btn = document.getElementById("followBtn");
+        btn.innerText = "Follow Pen: " + (camera.following ? "ON" : "OFF");
+        btn.style.background = camera.following
+          ? "var(--accent)"
+          : "rgba(128, 128, 128, 0.1)";
+        btn.style.color = camera.following ? "white" : "var(--text-main)";
       }
 
       function showStatus(msg) {

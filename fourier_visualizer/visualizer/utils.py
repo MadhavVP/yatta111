@@ -33,21 +33,33 @@ def process_image_to_fourier(image_path, num_coefficients=100):
 
     valid_contours.sort(key=get_sort_key)
 
+    valid_contours.sort(key=get_sort_key)
+
     all_coefficients = []
 
+    # 1. Collect all points to find GLOBAL center
+    all_points = []
+    contours_points = []
+    
     for contour in valid_contours:
         # Simplify
         epsilon = 0.002 * cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, epsilon, True)
-        points = approx.reshape(-1, 2)
+        points = approx.reshape(-1, 2).astype(np.float32)
+        contours_points.append(points)
+        all_points.extend(points)
         
-        # For uploaded contours, they are usually closed loops.
-        # We don't strictly need to retrace them if they are already closed,
-        # but resampling is always good.
-        # However, `process_image` often extracts outlines.
-        # If it's a thin line drawing, the contour might be a double-back path already.
+    if not all_points:
+        return []
         
-        coeffs = compute_fourier_coefficients(points, num_coefficients, is_closed_loop=True)
+    all_points_arr = np.array(all_points)
+    global_mean = np.mean(all_points_arr, axis=0)
+
+    # 2. Process each contour offset by GLOBAL mean
+    for points in contours_points:
+        offset_points = points - global_mean
+        
+        coeffs = compute_fourier_coefficients(offset_points, num_coefficients, is_closed_loop=True)
         all_coefficients.append(coeffs)
         
     return all_coefficients
@@ -58,14 +70,31 @@ def process_vectors_to_fourier(vector_data, num_coefficients=100):
     """
     all_coefficients = []
     
+    # 1. Collect all points to find GLOBAL center
+    all_points = []
+    strokes_points = []
+    
     for stroke in vector_data:
         if len(stroke) < 3: continue
+        # Convert to numpy array
+        points = np.array([[p['x'], p['y']] for p in stroke]).astype(np.float32)
+        strokes_points.append(points)
+        all_points.extend(points)
         
-        # Convert to numpy array [[x, y], ...]
-        points = np.array([[p['x'], p['y']] for p in stroke])
+    if not all_points:
+        return []
+
+    # Calculate Global Mean
+    all_points_arr = np.array(all_points)
+    global_mean = np.mean(all_points_arr, axis=0)
+    
+    # 2. Process each stroke offset by GLOBAL mean
+    for points in strokes_points:
+        # Center the entire drawing around (0,0)
+        offset_points = points - global_mean
         
         # Open strokes need retracing to be periodic
-        coeffs = compute_fourier_coefficients(points, num_coefficients, is_closed_loop=False)
+        coeffs = compute_fourier_coefficients(offset_points, num_coefficients, is_closed_loop=False)
         all_coefficients.append(coeffs)
         
     return all_coefficients
@@ -92,7 +121,7 @@ def compute_fourier_coefficients(points, num_coefficients, is_closed_loop=False)
     # So we keep Y as is.
     
     complex_points = x + 1j * y
-    complex_points = complex_points - np.mean(complex_points)
+    # REMOVED local centering: complex_points = complex_points - np.mean(complex_points)
 
     # 4. DFT
     dft_result = np.fft.fft(complex_points)
