@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Legislative Alerts{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1>Stay Informed on Laws That Affect You</h1>
+    <p>Get real-time notifications about legislative changes impacting your rights.</p>
+</div>
+
+<div class="subscribe-section">
+    <h2>Subscribe for Alerts</h2>
+    <form id="subscribeForm">
+        <label>
+            <input type="checkbox" name="interest" value="women"> Women's Rights
+        </label>
+        <label>
+            <input type="checkbox" name="interest" value="healthcare"> Healthcare
+        </label>
+        <label>
+            <input type="checkbox" name="interest" value="education"> Education
+        </label>
+
+        <button type="button" id="notifyBtn">Enable Notifications</button>
+    </form>
+    <div id="status"></div>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}
