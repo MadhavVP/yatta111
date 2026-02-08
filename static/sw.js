@@ -1,48 +1,206 @@
-// Themis Legislative Alert Service Worker
-// Handles push notifications
+// ==========================================
+// THEMIS LEGISLATIVE ALERTS
+// Notification & Bill Display System
+// ==========================================
 
-self.addEventListener('push', function (event) {
-    console.log('Push notification received');
+// ==========================================
+// NOTIFICATION SUBSCRIPTION
+// ==========================================
 
-    let data;
-    try {
-        data = event.data.json();
-    } catch (e) {
-        data = {
-            title: 'Legislative Alert',
-            body: event.data.text()
-        };
+async function subscribeUser() {
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = 'Requesting notification permission...';
+
+    if (!('serviceWorker' in navigator)) {
+        statusDiv.textContent = 'Push notifications are not supported in this browser.';
+        return;
     }
 
-    const title = data.title || 'Themis Legislative Alert';
-    const options = {
-        body: data.body || 'New legislation may affect you',
-        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="60" width="80" height="8" fill="%23CBAE51"/><rect x="45" y="20" width="10" height="48" fill="%232F3F5E"/><circle cx="35" cy="40" r="8" fill="%23B04467"/><circle cx="65" cy="40" r="8" fill="%23B04467"/></svg>',
-        badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="60" width="80" height="8" fill="%23CBAE51"/></svg>',
-        vibrate: [200, 100, 200],
-        tag: 'themis-legislation',
-        data: data.data || {},
-        requireInteraction: false
-    };
+    try {
+        // 1. Get VAPID Key from server
+        const response = await fetch('/api/vapid-key');
+        const data = await response.json();
+        const publicKey = data.publicKey;
 
-    event.waitUntil(
-        self.registration.showNotification(title, options)
-    );
-});
+        if (!publicKey) {
+            throw new Error("VAPID key not configured on server.");
+        }
 
-self.addEventListener('notificationclick', function (event) {
-    console.log('Notification clicked');
+        // 2. Register Service Worker
+        const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/'
+        });
 
-    event.notification.close();
+        await navigator.serviceWorker.ready;
 
-    const url = event.notification.data.url || '/';
+        // 3. Subscribe to Push Manager
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
 
-    event.waitUntil(
-        clients.openWindow(url)
-    );
-});
+        // 4. Get selected interests
+        const interests = Array.from(document.querySelectorAll('input[name="interest"]:checked'))
+            .map(cb => cb.value);
 
-self.addEventListener('activate', function (event) {
-    console.log('Service worker activated');
-    event.waitUntil(clients.claim());
+        if (interests.length === 0) {
+            statusDiv.textContent = 'Please select at least one interest area.';
+            return;
+        }
+
+        // 5. Send subscription to server
+        await fetch('/api/subscribe', {
+            method: 'POST',
+            body: JSON.stringify({
+                subscription: subscription,
+                interests: interests
+            }),
+            headers: {
+                'content-type': 'application/json'
+            }
+        });
+
+        statusDiv.textContent = 'Successfully subscribed to legislative alerts.';
+
+        // 6. NOW load and display the bills
+        loadBills();
+
+    } catch (err) {
+        console.error('Subscription error:', err);
+        statusDiv.textContent = 'Error: ' + err.message;
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// ==========================================
+// BILL DISPLAY
+// ==========================================
+
+async function loadBills() {
+    const container = document.getElementById('bills-container');
+    const loading = document.getElementById('loading');
+
+    try {
+        const response = await fetch('/api/feed');
+        const bills = await response.json();
+
+        if (loading) loading.style.display = 'none';
+        container.innerHTML = '';
+
+        if (!bills || bills.length === 0) {
+            container.innerHTML = '<div class="no-bills">No legislation found. Check back soon.</div>';
+            return;
+        }
+
+        bills.forEach(bill => {
+            const card = createBillCard(bill);
+            container.appendChild(card);
+        });
+
+        console.log(`Loaded ${bills.length} bills`);
+
+    } catch (error) {
+        console.error('Error loading bills:', error);
+        if (loading) loading.style.display = 'none';
+        container.innerHTML = '<div class="error">Unable to load legislation. Please try again later.</div>';
+    }
+}
+
+function createBillCard(bill) {
+    const card = document.createElement('div');
+    card.className = 'bill-card';
+
+    // Build summary from summary_points if available
+    let summaryHtml = '';
+    if (bill.summary_points && bill.summary_points.length > 0) {
+        summaryHtml = '<ul class="bill-summary-list">';
+        bill.summary_points.forEach(point => {
+            summaryHtml += `<li>${escapeHtml(point)}</li>`;
+        });
+        summaryHtml += '</ul>';
+    } else if (bill.summary) {
+        summaryHtml = `<div class="bill-summary">${escapeHtml(bill.summary)}</div>`;
+    }
+
+    card.innerHTML = `
+        <div class="bill-header">
+            <h3 class="bill-title">${escapeHtml(bill.title || 'Untitled Legislation')}</h3>
+            <span class="impact-badge impact-${(bill.impact_score || 'medium').toLowerCase()}">${escapeHtml(bill.impact_score || 'Medium')}</span>
+        </div>
+        
+        ${summaryHtml}
+        
+        ${bill.tags && bill.tags.length > 0 ? `
+            <div class="bill-tags">
+                ${bill.tags.map(tag => `<span class="tag">${escapeHtml(formatTag(tag))}</span>`).join('')}
+            </div>
+        ` : ''}
+        
+        <div class="bill-footer">
+            ${bill.audio_url ? `
+                <button class="audio-btn" onclick="playAudio('${escapeHtml(bill.audio_url)}')">
+                    🔊 Listen
+                </button>
+            ` : ''}
+            ${bill.url ? `
+                <a href="${escapeHtml(bill.url)}" target="_blank" rel="noopener noreferrer" class="bill-link">
+                    View Full Text →
+                </a>
+            ` : ''}
+        </div>
+    `;
+
+    return card;
+}
+
+function formatTag(tag) {
+    return tag
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function playAudio(url) {
+    // Simple audio player - you can enhance this
+    const audio = new Audio(url);
+    audio.play();
+}
+
+// ==========================================
+// INITIALIZATION
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', function () {
+    // DON'T load bills on page load - only after subscription!
+    // loadBills(); // REMOVED
+
+    // Set up notification button
+    const notifyBtn = document.getElementById('notifyBtn');
+    if (notifyBtn) {
+        notifyBtn.addEventListener('click', subscribeUser);
+    }
 });

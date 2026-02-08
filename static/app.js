@@ -62,6 +62,9 @@ async function subscribeUser() {
 
         statusDiv.textContent = 'Successfully subscribed to legislative alerts.';
 
+        // 6. NOW load and display the bills
+        loadBills();
+
     } catch (err) {
         console.error('Subscription error:', err);
         statusDiv.textContent = 'Error: ' + err.message;
@@ -95,7 +98,7 @@ async function loadBills() {
         const response = await fetch('/api/feed');
         const bills = await response.json();
 
-        loading.style.display = 'none';
+        if (loading) loading.style.display = 'none';
         container.innerHTML = '';
 
         if (!bills || bills.length === 0) {
@@ -112,7 +115,7 @@ async function loadBills() {
 
     } catch (error) {
         console.error('Error loading bills:', error);
-        loading.style.display = 'none';
+        if (loading) loading.style.display = 'none';
         container.innerHTML = '<div class="error">Unable to load legislation. Please try again later.</div>';
     }
 }
@@ -121,15 +124,25 @@ function createBillCard(bill) {
     const card = document.createElement('div');
     card.className = 'bill-card';
 
+    // Build summary from summary_points if available
+    let summaryHtml = '';
+    if (bill.summary_points && bill.summary_points.length > 0) {
+        summaryHtml = '<ul class="bill-summary-list">';
+        bill.summary_points.forEach(point => {
+            summaryHtml += `<li>${escapeHtml(point)}</li>`;
+        });
+        summaryHtml += '</ul>';
+    } else if (bill.summary) {
+        summaryHtml = `<div class="bill-summary">${escapeHtml(bill.summary)}</div>`;
+    }
+
     card.innerHTML = `
         <div class="bill-header">
             <h3 class="bill-title">${escapeHtml(bill.title || 'Untitled Legislation')}</h3>
-            <span class="bill-id">${escapeHtml(bill.id || 'BILL')}</span>
+            <span class="impact-badge impact-${(bill.impact_score || 'medium').toLowerCase()}">${escapeHtml(bill.impact_score || 'Medium')}</span>
         </div>
         
-        <div class="bill-summary">
-            ${escapeHtml(bill.summary || 'Summary not available.')}
-        </div>
+        ${summaryHtml}
         
         ${bill.tags && bill.tags.length > 0 ? `
             <div class="bill-tags">
@@ -138,10 +151,14 @@ function createBillCard(bill) {
         ` : ''}
         
         <div class="bill-footer">
-            <span class="bill-state">${escapeHtml(bill.state || 'IN')}</span>
+            ${bill.audio_url ? `
+                <button class="audio-btn" onclick="playAudio('${escapeHtml(bill.audio_url)}')">
+                    🔊 Listen
+                </button>
+            ` : ''}
             ${bill.url ? `
                 <a href="${escapeHtml(bill.url)}" target="_blank" rel="noopener noreferrer" class="bill-link">
-                    View Full Text
+                    View Full Text →
                 </a>
             ` : ''}
         </div>
@@ -167,20 +184,23 @@ function escapeHtml(unsafe) {
         .replace(/'/g, "&#039;");
 }
 
+function playAudio(url) {
+    // Simple audio player - you can enhance this
+    const audio = new Audio(url);
+    audio.play();
+}
+
 // ==========================================
 // INITIALIZATION
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Load bills
-    loadBills();
+    // DON'T load bills on page load - only after subscription!
+    // loadBills(); // REMOVED
 
     // Set up notification button
     const notifyBtn = document.getElementById('notifyBtn');
     if (notifyBtn) {
         notifyBtn.addEventListener('click', subscribeUser);
     }
-
-    // Reload bills every 5 minutes
-    setInterval(loadBills, 5 * 60 * 1000);
 });
