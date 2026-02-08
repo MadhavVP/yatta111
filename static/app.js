@@ -204,3 +204,12 @@ document.addEventListener('DOMContentLoaded', function () {
         notifyBtn.addEventListener('click', subscribeUser);
     }
 });
+
+// Force service worker update on page load
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        for (let registration of registrations) {
+            registration.update();
+        }
+    });
+}

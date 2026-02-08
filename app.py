@@ -20,6 +20,13 @@ users_collection = db["users"]
 def index():
     return render_template('index.html')
 
+@app.route('/about')
+def about():
+    """
+    About page - project information
+    """
+    return render_template('about.html')
+
 @app.route('/sw.js')
 def service_worker():
     from flask import send_from_directory

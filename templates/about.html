@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}About Themis{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero">
+    <div class="hero-content">
+        <div class="logo-container">
+            <svg class="logo-icon" width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="60" width="80" height="8" fill="#CBAE51" />
+                <rect x="45" y="20" width="10" height="48" fill="#2F3F5E" />
+                <circle cx="35" cy="40" r="8" fill="#B04467" />
+                <circle cx="65" cy="40" r="8" fill="#B04467" />
+                <line x1="28" y1="35" x2="42" y2="45" stroke="#2F3F5E" stroke-width="2" />
+                <line x1="72" y1="35" x2="58" y2="45" stroke="#2F3F5E" stroke-width="2" />
+            </svg>
+        </div>
+        <h1>About Themis</h1>
+        <p class="tagline">Making legislative information accessible to everyone</p>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="about-content">
+
+    <!-- What is Themis -->
+    <section class="content-section">
+        <h2>What is Themis?</h2>
+        <p>Themis is a legislative alert system that helps people stay informed about bills and laws that directly
+            affect their lives. Every year, thousands of bills pass through state and federal legislatures that impact
+            civil rights, healthcare, education, employment, and more—but most people never hear about them until it's
+            too late.</p>
+        <p>We built Themis to solve this problem. Our platform automatically tracks legislation based on your interests
+            and sends you personalized notifications when relevant bills are introduced or passed, with summaries
+            written in plain language.</p>
+    </section>
+
+    <!-- Why This Matters -->
+    <section class="content-section">
+        <h2>Why This Matters</h2>
+        <p>Legislative changes can have profound effects on people's daily lives, but tracking this information requires
+            constant monitoring of multiple legislative databases, understanding complex legal language, and time that
+            most people don't have.</p>
+        <p>Women, LGBTQ+ individuals, and other marginalized groups are often disproportionately affected by
+            legislation, yet face barriers to civic engagement. Themis removes these barriers by bringing the
+            information directly to you.</p>
+    </section>
+
+    <!-- How It Works -->
+    <section class="content-section">
+        <h2>How It Works</h2>
+        <ol>
+            <li><strong>Select Your Interests:</strong> Choose the policy areas that matter to you—reproductive rights,
+                healthcare, education, voting access, criminal justice, and more.</li>
+            <li><strong>We Track Legislation:</strong> Our system monitors state and federal legislative databases every
+                30 minutes, scraping new bills as they're introduced.</li>
+            <li><strong>AI Summarization:</strong> Complex legal text is processed through AI to generate plain-language
+                summaries and extract relevant policy tags.</li>
+            <li><strong>Smart Matching:</strong> Bills are automatically matched to users based on their selected
+                interests.</li>
+            <li><strong>Get Notified:</strong> You receive push notifications when legislation affecting you is
+                introduced or passes, with links to the full text.</li>
+        </ol>
+    </section>
+
+    <!-- Technology -->
+    <section class="content-section">
+        <h2>The Technology</h2>
+        <ul>
+            <li><strong>Web scraping:</strong> Collects bills from Indiana's legislative database</li>
+            <li><strong>AI/NLP:</strong> Summarizes bills and extracts policy categories</li>
+            <li><strong>MongoDB:</strong> Stores bills and user preferences</li>
+            <li><strong>Web push notifications:</strong> Real-time alerts</li>
+            <li><strong>Flask backend:</strong> Automated scheduling checks for new legislation every 30 minutes</li>
+        </ul>
+    </section>
+
+    <!-- Why Themis -->
+    <section class="content-section">
+        <h2>Why "Themis"?</h2>
+        <p>In Greek mythology, Themis is the goddess of divine law, order, and justice. She's depicted holding scales,
+            symbolizing fairness and balance. Themis had the gift of foresight and served as an advisor on matters of
+            justice.</p>
+        <p>We chose this name because our platform helps you see what's coming in the legislative landscape and make
+            informed decisions about laws that affect you—just like Themis guided the ancient Greeks toward fair and
+            just outcomes.</p>
+    </section>
+
+    <!-- Team -->
+    <section class="content-section">
+        <h2>The Team</h2>
+        <p>Themis was created by four students at Purdue University for InnovateHer 2026:</p>
+        <ul>
+            <li><strong>Sophia</strong> - Backend & Notifications: Built the Flask server, notification system, and API
+                endpoints</li>
+            <li><strong>Nathan</strong> - Web Scraping: Developed the scraper that collects bills from legislative
+                websites</li>
+            <li><strong>Gabe</strong> - AI Processing: Implemented AI summarization and tag extraction</li>
+            <li><strong>Madhav</strong> - Database & Orchestration: Designed the MongoDB schema and built the scheduler
+            </li>
+        </ul>
+    </section>
+
+    <!-- InnovateHer -->
+    <section class="content-section">
+        <h2>InnovateHer 2026</h2>
+        <p>This project was developed for InnovateHer, Purdue University's hackathon celebrating women and gender
+            minorities in technology. The event challenges participants to create solutions that address real-world
+            problems affecting underrepresented communities.</p>
+        <p>Themis directly aligns with InnovateHer's mission by making civic engagement accessible to people who lack
+            resources to track legislation and empowering marginalized groups to stay informed about laws affecting
+            their rights.</p>
+        <p><strong>Track:</strong> Mind Matters (civic empowerment as mental health/safety)<br>
+            <strong>Dates:</strong> February 7-8, 2026<br>
+            <strong>Location:</strong> Purdue University, West Lafayette, IN
+        </p>
+    </section>
+
+    <!-- Get Started CTA -->
+    <section class="content-section cta-section">
+        <h2>Get Started</h2>
+        <p>Ready to stay informed about legislation that affects you?</p>
+        <a href="/" class="btn btn-primary">Start Tracking Legislation</a>
+    </section>
+
+</div>
+{% endblock %}
