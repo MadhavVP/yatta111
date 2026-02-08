@@ -72,13 +72,45 @@ After activation, you can run the Flask app:
 ```powershell
 python app.py
 ```
+### 3. Configure Environment Variables
+1.  Create a `.env` file in the root directory.
+2.  Add your VAPID keys (generated via `pywebpush` or online tools):
+    ```ini
+    PUBLIC_KEY=your_public_key_here
+    PRIVATE_KEY=your_private_key_here
+    VAPID_CLAIM_EMAIL=mailto:admin@example.com
+    ```
+    *Note: Do not wrap keys in quotes unless they contain spaces.*
 
+<<<<<<< HEAD
 Or start the scheduler:
+=======
+### 4. Run the Server
+Use the python executable inside your venv:
+```bash
+./venv/bin/python3.14 app.py
+```
+The server will start on **http://127.0.0.1:8000** (Port 8000 to avoid AirPlay conflict).
+
+## API Endpoints
+
+-   `GET /`: Serves the frontend.
+-   `POST /api/subscribe`: Subscribes a user to notifications.
+    -   Payload: `{ "subscription": {...}, "interests": ["women", "healthcare"] }`
+-   `POST /api/trigger-check`: **(Demo Only)** Manually triggers the bill fetching pipeline.
+    -   `curl -X POST http://127.0.0.1:8000/api/trigger-check`
+
+## Testing Notifications
+1.  Open `http://localhost:8000`.
+2.  Click **"Enable Notifications"**. You should see a "Welcome" push.
+3.  Run the manual trigger command above. You should receive a "New Bill" push.
+>>>>>>> 04d9d30 (Enhance scheduler with JSON notifications and update docs)
 
 ```powershell
 python scheduler.py
 ```
 
+<<<<<<< HEAD
 ## Color Scheme
 
 [Color scheme](https://coolors.co/b04467-2f3f5e-fcf5e3-cbae51-272727):
@@ -90,3 +122,13 @@ Inspired by InnovateHer's lovely color scheme for Spring 2026.
 - FCF5E3
 - CBAE51
 - 272727
+=======
+- `app.py`: Main Flask application and API routes.
+- `notifications.py`: Handles sending web push notifications.
+- `scheduler.py`: Background job orchestration (Teammate's module).
+- `scraper.py`: Fetches bills from external APIs (Teammate's module).
+- `ai_processor.py`: Summarizes bill text (Teammate's module).
+- `database.py`: Database interactions (Teammate's module).
+- `static/`: CSS, JavaScript, and images.
+- `templates/`: HTML templates.
+>>>>>>> 04d9d30 (Enhance scheduler with JSON notifications and update docs)

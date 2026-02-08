@@ -16,9 +16,13 @@ def send_web_push(subscription_info, message_body):
     
     Args:
         subscription_info (dict): The subscription object from the browser.
-        message_body (str): The text message to send.
+        message_body (dict or str): The message payload.
     """
     try:
+        # If it's a dict, convert to JSON string
+        if isinstance(message_body, dict):
+            message_body = json.dumps(message_body, separators=(',', ':'))
+
         webpush(
             subscription_info=subscription_info,
             data=message_body,
