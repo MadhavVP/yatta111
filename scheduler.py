@@ -1,122 +1,128 @@
-"""
-Scheduler module - orchestrates the legislative alert pipeline
-Runs in background without blocking Flask server startup
-"""
+# SCHEDULER MODULE
+import threading
 import time
-from apscheduler.schedulers.background import BackgroundScheduler
-import scraper
-import ai_processor
-import database
-import notifications
-import atexit
+import os
+from pymongo import MongoClient
+from notifications import send_web_push
 
+def fetch_bills_for_tags(tags):
+    """
+    Fetches bills for specific tags (interests).
+    This is called when a user subscribes to immediately populate their feed.
+    
+    Args:
+        tags: List of interest tags (e.g., ["healthcare", "labor"])
+    
+    Returns:
+        List of bill dictionaries
+    """
+    print(f"[Fetch Bills] Searching for bills with tags: {tags}")
+    
+    bills = []
+    
+    for tag in tags:
+        print(f"[Fetch Bills] Processing tag: {tag}")
+        
+        # TODO: Replace with actual query to Nathan's legislation scraper API
+        # Example API call:
+        # response = requests.get(f"http://legislation-api/search?tag={tag}")
+        # links = response.json()
+        
+        links = []  # Placeholder - query Nathan's thing here
+        
+        if links:
+            for link in links:
+                # TODO: Replace with actual query to Gabe's summarization API
+                # Example API call:
+                # response = requests.post("http://summarizer-api/summarize", 
+                #                          json={"url": link})
+                # summary_data = response.json()
+                
+                # For now, create a mock bill structure
+                bill = {
+                    "id": f"bill_{tag}_{len(bills)}",  # Generate unique ID
+                    "title": f"Bill related to {tag}",
+                    "impact_score": "Medium",
+                    "tags": [tag],
+                    "summary_points": [
+                        f"This is a summary point about {tag}",
+                        "More details would come from Gabe's API"
+                    ],
+                    "audio_url": "",
+                    "source_url": link if isinstance(link, str) else ""
+                }
+                
+                bills.append(bill)
+    
+    print(f"[Fetch Bills] Found {len(bills)} bills for tags {tags}")
+    return bills
 
 def orchestrate_pipeline():
     """
-    Main pipeline: Fetch bills -> Process -> Notify users
-    This function is CALLED by the scheduler, not run on import!
+    Pipeline execution that:
+    1. Fetches all users from MongoDB
+    2. For each user, checks their tags
+    3. Queries for new legislation (integrate with Nathan's API)
+    4. Generates summaries (integrate with Gabe's API)
+    5. Sends notifications
     """
-    print("\n[Scheduler] === Starting legislation check ===")
+    print("Beginning new legislation check")
     
-    try:
-        # 1. Fetch NEW bills from APIs (Nathan's code)
-        print("[Scheduler] Fetching new bills...")
-        new_bills = scraper.fetch_new_bills()
+    # Connect to MongoDB
+    client = MongoClient(os.environ["MONGO_URI"])
+    db = client["users"]
+    users_collection = db["users"]
+    bills_collection = db["bills"]
+    
+    # Fetch all users
+    cursor = users_collection.find({})
+    
+    for user in cursor:
+        tags = user.get('tags', [])
+        subscription_info = user.get('subscription_info')
         
-        if not new_bills:
-            print("[Scheduler] No new bills found")
-            return
+        if not subscription_info:
+            print(f"Skipping user - no subscription info")
+            continue
         
-        print(f"[Scheduler] Found {len(new_bills)} new bills to process")
+        print(f"[Pipeline] Checking legislation for user with tags: {tags}")
         
-        # 2. Process each bill
+        # Fetch new bills for this user's tags
+        new_bills = fetch_bills_for_tags(tags)
+        
+        # Save new bills to database (avoid duplicates)
+        bills_added = 0
         for bill in new_bills:
-            bill_id = bill.get('id')
-            print(f"[Scheduler] Processing bill {bill_id}: {bill.get('title')}")
-            
-            # Get full bill text
-            bill_text = bill.get('text', '') or scraper.get_bill_text(bill_id)
-            
-            # AI processing (Gabe's code)
-            summary = ai_processor.summarize(bill_text)
-            tags = ai_processor.extract_tags(bill_text)
-            
-            print(f"[Scheduler]   Tags: {tags}")
-            
-            # Prepare complete bill data
-            full_bill_data = {
-                "id": bill_id,
-                "title": bill.get('title'),
-                "source": bill.get('source'),
-                "state": bill.get('state'),
-                "status": bill.get('status'),
-                "url": bill.get('url'),
-                "summary": summary,
-                "tags": tags,
-                "processed_at": time.time()
-            }
-            
-            # Save to database (Madhav's code)
-            if not database.save_bill(full_bill_data):
-                print(f"[Scheduler]   Bill {bill_id} already exists, skipping")
-                continue
-            
-            # Find users interested in these tags
-            matching_subscriptions = database.find_matching_users(tags)
-            
-            if not matching_subscriptions:
-                print(f"[Scheduler]   No matching users for bill {bill_id}")
-                continue
-            
-            print(f"[Scheduler]   Notifying {len(matching_subscriptions)} users")
-            
-            # Create notification payload
-            notification_payload = {
-                "title": f"New Legislation: {bill.get('title')}",
-                "body": summary[:200],
-                "url": full_bill_data.get('url', '/'),
-                "data": {"bill_id": bill_id, "tags": tags}
-            }
-            
-            # Send notifications (Sophia's code)
-            for subscription in matching_subscriptions:
-                try:
-                    notifications.send_web_push(subscription, notification_payload)
-                except Exception as e:
-                    print(f"[Scheduler]   Failed to notify user: {e}")
+            existing = bills_collection.find_one({"id": bill.get("id")})
+            if not existing:
+                bills_collection.insert_one(bill)
+                bills_added += 1
+                
+                # Send notification for this new bill
+                notification_message = f"New legislation: {bill.get('title', 'Unknown bill')}"
+                send_web_push(subscription_info, notification_message)
         
-        print("[Scheduler] === Legislation check complete ===\n")
-        
-    except Exception as e:
-        print(f"[Scheduler] ERROR in pipeline: {e}")
-        import traceback
-        traceback.print_exc()
+        if bills_added > 0:
+            print(f"[Pipeline] Added {bills_added} new bills and sent notifications")
+    
+    # Close MongoDB connection
+    client.close()
+    print("Ending new legislation check")
 
+def scheduled_job():
+    """
+    Wrapper function that runs the pipeline in a loop with a delay.
+    """
+    while True:
+        orchestrate_pipeline()
+        # Sleep for 1 hour between checks (adjust as needed)
+        time.sleep(3600)  # 3600 seconds = 1 hour
 
 def start_scheduler():
     """
-    Start the background scheduler using APScheduler
-    This runs in a separate thread and won't block Flask
+    Starts the background scheduler thread.
     """
-    scheduler = BackgroundScheduler()
-    
-    # Schedule the pipeline to run every 30 minutes
-    scheduler.add_job(
-        func=orchestrate_pipeline,
-        trigger="interval",
-        minutes=30,
-        id='legislation_pipeline',
-        replace_existing=True
-    )
-    
-    # Start the scheduler
-    scheduler.start()
-    print("[Scheduler] ✓ Background scheduler started (runs every 30 minutes)")
-    
-    # Ensure scheduler shuts down gracefully when app closes
-    atexit.register(lambda: scheduler.shutdown())
-    
-    # Optional: Run once immediately on startup
-    # orchestrate_pipeline()
-    
-    return scheduler
+    # Create and start the background thread
+    scheduler_thread = threading.Thread(target=scheduled_job, daemon=True)
+    scheduler_thread.start()
+    print("[SCHEDULER] Started background job - checking every hour.")

@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from apscheduler.schedulers.background import BackgroundScheduler
-import database
+from pymongo import MongoClient
 import scheduler as my_scheduler
 import notifications
 import os
@@ -11,6 +11,12 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+# MongoDB connection
+client = MongoClient(os.environ["MONGO_URI"])
+db = client["users"]
+users_collection = db["users"]
+bills_collection = db["bills"]  # Optional: for storing bills
 
 # --- Routes ---
 @app.route('/')
@@ -37,13 +43,36 @@ def subscribe():
     subscription = data['subscription']
     interests = data.get('interests', [])
     
-    # Save to "Database"
-    user_id = database.save_user(subscription, interests)
+    # Save to MongoDB
+    user_doc = {
+        "subscription_info": subscription,
+        "tags": interests
+    }
+    
+    result = users_collection.insert_one(user_doc)
+    user_id = str(result.inserted_id)
     
     # Send a welcome push
     notifications.send_web_push(subscription, "Welcome! You are subscribed to legislative alerts.")
     
-    return jsonify({"message": "Subscribed successfully", "user_id": user_id}), 201
+    # Fetch bills for user's interests and create cards
+    print(f"[Subscribe] Fetching bills for interests: {interests}")
+    new_bills = my_scheduler.fetch_bills_for_tags(interests)
+    
+    # Save bills to database (avoid duplicates)
+    if new_bills:
+        for bill in new_bills:
+            # Check if bill already exists
+            existing = bills_collection.find_one({"id": bill.get("id")})
+            if not existing:
+                bills_collection.insert_one(bill)
+        print(f"[Subscribe] Added {len(new_bills)} new bills to database")
+    
+    return jsonify({
+        "message": "Subscribed successfully", 
+        "user_id": user_id,
+        "bills_fetched": len(new_bills)
+    }), 201
 
 @app.route('/api/trigger-check', methods=['POST'])
 def trigger_check():
@@ -72,9 +101,15 @@ def get_feed():
     """
     sector = request.args.get('sector')
     state = request.args.get('state')
+    tags = request.args.getlist('tags')  # Support filtering by tags
     
-    # Get bills from database
-    bills = database.get_all_bills()
+    # Build query
+    query = {}
+    if tags:
+        query["tags"] = {"$in": tags}
+    
+    # Get bills from MongoDB
+    bills = list(bills_collection.find(query, {"_id": 0}))
     
     # If no bills in DB, return mock data for demonstration
     if not bills:
@@ -83,6 +118,7 @@ def get_feed():
                 "id": "1",
                 "title": "The Safe Staffing Act of 2024",
                 "impact_score": "High",
+                "tags": ["healthcare", "labor"],
                 "summary_points": [
                     "Sets mandatory nurse-to-patient ratios in all state hospitals.",
                     "Prohibits mandatory overtime for nurses except in declared emergencies.",
@@ -94,6 +130,7 @@ def get_feed():
                 "id": "2",
                 "title": "Fair Scheduling & Wages Ordinance",
                 "impact_score": "Medium",
+                "tags": ["labor", "service"],
                 "summary_points": [
                     "Requires 14-day advance notice for all shift schedules.",
                     "Mandates 'predictability pay' for last-minute schedule changes.",
@@ -105,6 +142,7 @@ def get_feed():
                 "id": "3",
                 "title": "Teacher Pay Protection Bill",
                 "impact_score": "High",
+                "tags": ["education", "labor"],
                 "summary_points": [
                     "Guarantees a minimum starting salary of $50,000 for all public school teachers.",
                     "Provides annual cost-of-living adjustments tied to inflation.",
