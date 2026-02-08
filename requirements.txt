@@ -1,0 +1,6 @@
+flask
+apscheduler
+pymongo
+pywebpush
+python-dotenv
+requests

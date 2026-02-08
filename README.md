@@ -1,32 +1,3 @@
-# yatta111
+# A webservice designed make legislative information more accessible
 
-Hackathon project for InnovateHer 2026 at Purdue University!
-
-This project draws on the theory explained so elegantly in 3Blue1Brown's video [here](https://youtu.be/r6sGWTCMz2k)
-
-## Getting Started
-
-### 1. Activate the Virtual Environment
-
-On Windows (PowerShell):
-
-```bash
-.\fourier_visualizer\venv\Scripts\Activate
-```
-
-### 2. Run the Server
-
-Once the environment is active:
-
-```bash
-cd fourier_visualizer
-python manage.py runserver
-```
-
-Then open your browser to `http://127.0.0.1:8000/`.
-
-### Dependencies
-
-- Django
-- OpenCV
-- NumPy
+## Themus is a web service that helps users stay informed about recently passed or active legislation that directly affects them. By combining user-provided information with real-time legislative data, Themus reports relevant laws and policy changes at the federal and state level that users should know about.
