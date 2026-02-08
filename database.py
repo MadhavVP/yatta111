@@ -60,3 +60,14 @@ def find_matching_users(tags):
     # Extract just the subscription part
     subscriptions = [u.get('subscription') for u in users if u.get('subscription')]
     return subscriptions
+
+def get_all_bills():
+    """
+    Retrieves all bills from the database.
+    """
+    if db is None: return []
+    
+    bills_collection = db["bills"]
+    # Exclude _id from result
+    bills = list(bills_collection.find({}, {'_id': 0}))
+    return bills

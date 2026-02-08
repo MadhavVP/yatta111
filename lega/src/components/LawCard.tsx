@@ -34,31 +34,31 @@ export default function LawCard({
     switch (score) {
       case "High":
         return {
-          bg: "bg-red-50",
-          text: "text-red-700",
-          border: "border-red-100",
-          dot: "bg-red-500",
+          bg: "bg-brand-magenta/10",
+          text: "text-brand-magenta",
+          border: "border-brand-magenta/20",
+          dot: "bg-brand-magenta",
         };
       case "Medium":
         return {
-          bg: "bg-amber-50",
-          text: "text-amber-700",
-          border: "border-amber-100",
-          dot: "bg-amber-500",
+          bg: "bg-brand-gold/10",
+          text: "text-brand-gold",
+          border: "border-brand-gold/20",
+          dot: "bg-brand-gold",
         };
       case "Low":
         return {
-          bg: "bg-emerald-50",
-          text: "text-emerald-700",
-          border: "border-emerald-100",
-          dot: "bg-emerald-500",
+          bg: "bg-brand-darkblue/10",
+          text: "text-brand-darkblue",
+          border: "border-brand-darkblue/20",
+          dot: "bg-brand-darkblue",
         };
       default:
         return {
-          bg: "bg-slate-50",
-          text: "text-slate-700",
-          border: "border-slate-100",
-          dot: "bg-slate-500",
+          bg: "bg-brand-cream",
+          text: "text-brand-darkgrey",
+          border: "border-brand-darkgrey/10",
+          dot: "bg-brand-darkgrey",
         };
     }
   };
@@ -96,7 +96,7 @@ export default function LawCard({
         {summary_points.map((point, idx) => (
           <div key={idx} className="flex items-start group">
             <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center mr-4 mt-0.5 flex-shrink-0 group-hover:bg-indigo-100 transition-colors">
-              <Activity className="w-3.5 h-3.5 text-indigo-500" />
+              <Activity className="w-3.5 h-3.5 text-brand-darkblue" />
             </div>
             <p className="text-slate-600 text-[15px] leading-relaxed font-medium">
               {point}
@@ -111,13 +111,13 @@ export default function LawCard({
           onClick={toggleAudio}
           className={`flex items-center space-x-3 font-bold text-sm transition-colors ${
             audio_url
-              ? "text-indigo-600 hover:text-indigo-700"
+              ? "text-brand-magenta hover:text-brand-magenta/80"
               : "text-slate-300 cursor-not-allowed"
           }`}
           disabled={!audio_url}
         >
           <div
-            className={`p-2 rounded-full ${audio_url ? "bg-indigo-50" : "bg-slate-50"}`}
+            className={`p-2 rounded-full ${audio_url ? "bg-brand-magenta/10" : "bg-slate-50"}`}
           >
             {isPlaying ? (
               <Pause className="w-4 h-4 fill-current" />
@@ -140,7 +140,7 @@ export default function LawCard({
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="bg-slate-900 text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-slate-200"
+          className="bg-brand-darkblue text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-brand-darkblue/20"
         >
           Take Action
         </motion.button>

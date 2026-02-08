@@ -36,26 +36,40 @@ export default function FeedPage() {
   const router = useRouter();
   const [userSector, setUserSector] = useState<string | null>(null);
   const [userState, setUserState] = useState<string | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [bills, setBills] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const sector = localStorage.getItem("lega_user_sector");
-    const state = localStorage.getItem("lega_user_state");
+    const sector = localStorage.getItem("lega_user_sector") || "Healthcare";
+    const state = localStorage.getItem("lega_user_state") || "Indiana";
 
-    if (sector) setUserSector(sector);
-    else setUserSector("Healthcare");
+    setUserSector(sector);
+    setUserState(state);
 
-    if (state) setUserState(state);
-    else setUserState("Indiana");
-
-    setIsLoaded(true);
+    // Fetch bills from API
+    fetch(`http://127.0.0.1:5000/api/feed?sector=${sector}&state=${state}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setBills(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch bills:", err);
+        setLoading(false);
+      });
   }, []);
 
   const handleEditProfile = () => {
     router.push("/?edit=true");
   };
 
-  if (!isLoaded) return null;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-brand-cream/30 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-magenta"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FDFDFF] pb-24 font-sans">
@@ -63,18 +77,18 @@ export default function FeedPage() {
       <motion.header
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-100 px-6 py-4 shadow-[0_2px_15px_rgba(0,0,0,0.02)] flex justify-between items-center"
+        className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-brand-darkblue/5 px-6 py-4 shadow-[0_2px_15px_rgba(0,0,0,0.02)] flex justify-between items-center"
       >
         <motion.div
           whileHover={{ scale: 1.02 }}
           className="cursor-pointer"
           onClick={() => router.push("/")}
         >
-          <h1 className="text-2xl font-black text-slate-900 tracking-tighter">
+          <h1 className="text-2xl font-black text-brand-darkblue tracking-tighter">
             Lega
           </h1>
-          <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mt-[-2px]">
-            {userState || "Local"} • {userSector || "Labor"}
+          <p className="text-[10px] text-brand-gold font-bold uppercase tracking-widest mt-[-2px]">
+            {userState} • {userSector}
           </p>
         </motion.div>
         <div className="flex items-center space-x-2">
@@ -82,7 +96,7 @@ export default function FeedPage() {
             whileHover={{ scale: 1.1, rotate: 15 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleEditProfile}
-            className="p-2.5 text-slate-400 hover:text-indigo-600 rounded-2xl hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-100"
+            className="p-2.5 text-brand-darkblue/40 hover:text-brand-magenta rounded-2xl hover:bg-brand-magenta/5 transition-all border border-transparent hover:border-brand-magenta/10"
           >
             <Settings className="w-5 h-5" />
           </motion.button>
@@ -98,10 +112,10 @@ export default function FeedPage() {
           className="flex items-center justify-between mb-10"
         >
           <div>
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-3xl font-extrabold text-brand-darkblue tracking-tight">
               Latest Updates
             </h2>
-            <p className="text-slate-400 text-sm mt-1 font-medium italic">
+            <p className="text-brand-darkblue/40 text-sm mt-1 font-medium italic">
               {new Date().toLocaleDateString("en-US", {
                 month: "long",
                 day: "numeric",
@@ -109,14 +123,14 @@ export default function FeedPage() {
               })}
             </p>
           </div>
-          <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100 shadow-sm animate-pulse">
-            2 NEW
+          <span className="text-[11px] font-bold text-brand-magenta bg-brand-magenta/10 px-3 py-1.5 rounded-full border border-brand-magenta/20 shadow-sm animate-pulse">
+            {bills.length} NEW
           </span>
         </motion.div>
 
         <div className="space-y-8">
           <AnimatePresence>
-            {MOCK_BILLS.map((bill, index) => (
+            {bills.map((bill, index) => (
               <motion.div
                 key={bill.id}
                 initial={{ opacity: 0, y: 30 }}
@@ -138,15 +152,15 @@ export default function FeedPage() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="mt-20 text-center py-10 border-t border-slate-50"
+          className="mt-20 text-center py-10 border-t border-brand-darkblue/5"
         >
           <div className="flex justify-center mb-4">
-            <Heart className="w-6 h-6 text-slate-200" />
+            <Heart className="w-6 h-6 text-brand-darkblue/20" />
           </div>
-          <p className="text-slate-400 text-sm font-medium">
+          <p className="text-brand-darkblue/40 text-sm font-medium">
             You are all caught up for today.
           </p>
-          <p className="text-slate-300 text-xs mt-2 italic">
+          <p className="text-brand-darkblue/30 text-xs mt-2 italic">
             Lega is checking for new updates in {userState}...
           </p>
         </motion.div>
