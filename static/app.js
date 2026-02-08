@@ -184,3 +184,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // Reload bills every 5 minutes
     setInterval(loadBills, 5 * 60 * 1000);
 });
+
+// Force service worker update on page load
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        for (let registration of registrations) {
+            registration.update();
+        }
+    });
+}

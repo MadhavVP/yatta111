@@ -17,8 +17,8 @@ self.addEventListener('push', function (event) {
     const title = data.title || 'Themis Legislative Alert';
     const options = {
         body: data.body || 'New legislation may affect you',
-        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="60" width="80" height="8" fill="%23CBAE51"/><rect x="45" y="20" width="10" height="48" fill="%232F3F5E"/><circle cx="35" cy="40" r="8" fill="%23B04467"/><circle cx="65" cy="40" r="8" fill="%23B04467"/></svg>',
-        badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="60" width="80" height="8" fill="%23CBAE51"/></svg>',
+        icon: '/static/icon.png',  // Uses your icon.png file
+        badge: '/static/icon.png', // Can also use same icon for badge
         vibrate: [200, 100, 200],
         tag: 'themis-legislation',
         data: data.data || {},

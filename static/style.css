@@ -23,10 +23,94 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Didact Gothic', sans-serif;
     background: var(--background);
     color: var(--text);
-    line-height: 1.6;
+    line-height: 1.7;
+}
+
+/* ==========================================
+   TYPOGRAPHY
+   ========================================== */
+
+h1 {
+    font-family: 'Hind', sans-serif;
+    font-weight: 700;
+}
+
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'Arimo', sans-serif;
+    font-weight: 600;
+}
+
+p,
+li,
+label,
+input,
+a {
+    font-family: 'Didact Gothic', sans-serif;
+}
+
+button {
+    font-family: 'Arimo', sans-serif;
+    font-weight: 600;
+}
+
+/* Hero title */
+.hero h1 {
+    font-family: 'Hind', sans-serif;
+    font-weight: 700;
+}
+
+.hero .tagline {
+    font-family: 'Didact Gothic', sans-serif;
+}
+
+/* Card titles */
+.card h2,
+.card h3 {
+    font-family: 'Arimo', sans-serif;
+    font-weight: 700;
+}
+
+/* Bill card title */
+.bill-title {
+    font-family: 'Arimo', sans-serif;
+    font-weight: 600;
+}
+
+/* Section headers */
+.section-header h2,
+.content-section h2 {
+    font-family: 'Arimo', sans-serif;
+    font-weight: 700;
+}
+
+/* Button text */
+.btn {
+    font-family: 'Arimo', sans-serif;
+    font-weight: 600;
+}
+
+/* Tags and labels */
+.tag,
+.bill-id,
+.bill-state {
+    font-family: 'Arimo', sans-serif;
+    font-weight: 600;
+}
+
+.card-description {
+    font-family: 'Didact Gothic', sans-serif;
+}
+
+.form-group label,
+.checkbox-label span {
+    font-family: 'Didact Gothic', sans-serif;
 }
 
 /* ==========================================
@@ -37,13 +121,14 @@ nav {
     background: var(--secondary);
     padding: 1rem 2rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-family: 'Arimo', sans-serif;
 }
 
 nav a {
     color: var(--white);
     margin-right: 2rem;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
     transition: color 0.2s;
 }
 
@@ -435,6 +520,62 @@ main {
 }
 
 /* ==========================================
+   ABOUT PAGE STYLES
+   ========================================== */
+
+.about-content {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.content-section {
+    background: var(--white);
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    border-left: 6px solid var(--primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.content-section h2 {
+    color: var(--secondary);
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--background);
+}
+
+.content-section p {
+    margin-bottom: 1rem;
+    line-height: 1.8;
+}
+
+.content-section ul,
+.content-section ol {
+    margin-left: 2rem;
+    line-height: 1.8;
+}
+
+.content-section li {
+    margin-bottom: 0.75rem;
+}
+
+.content-section strong {
+    color: var(--secondary);
+}
+
+.cta-section {
+    text-align: center;
+}
+
+.cta-section .btn {
+    display: inline-block;
+    width: auto;
+    padding: 1rem 2.5rem;
+    margin-top: 1rem;
+    text-decoration: none;
+}
+
+/* ==========================================
    FOOTER
    ========================================== */
 
@@ -502,6 +643,10 @@ footer a:hover {
     }
 
     .card {
+        padding: 1.5rem;
+    }
+
+    .content-section {
         padding: 1.5rem;
     }
 }
