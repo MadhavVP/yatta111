@@ -3,7 +3,7 @@ import threading
 import time
 import os
 from pymongo import Mongo
-
+from notifications import send_web_push
 def orchestrate_pipeline():
     """
     Mock pipeline execution.
@@ -31,8 +31,7 @@ def orchestrate_pipeline():
                 newlaws.append(links)
             for law in newlaws:
                 popup = '' #query gabe's thing
-                #send a popup to user
-                    
+                send_web_push(user['subscription_info'], popup)                    
 
         time.sleep(1)
         print("Ending new legislation check")
