@@ -14,7 +14,7 @@ self.addEventListener('push', function (event) {
         };
     }
 
-    const title = data.title || 'Themis Legislative Alert';
+    const title = data.title || 'Themis';
     const options = {
         body: data.body || 'New legislation may affect you',
         icon: '/static/icon.png',  // Uses your icon.png file
