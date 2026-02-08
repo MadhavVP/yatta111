@@ -1,29 +1,118 @@
 {% extends "base.html" %}
 
-{% block title %}Legislative Alerts{% endblock %}
+{% block title %}Themis - Legislative Alerts{% endblock %}
 
 {% block content %}
+<!-- Hero Section -->
 <div class="hero">
-    <h1>Stay Informed on Laws That Affect You</h1>
-    <p>Get real-time notifications about legislative changes impacting your rights.</p>
+    <div class="hero-content">
+        <div class="logo-container">
+            <svg class="logo-icon" width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="60" width="80" height="8" fill="#CBAE51" />
+                <rect x="45" y="20" width="10" height="48" fill="#2F3F5E" />
+                <circle cx="35" cy="40" r="8" fill="#B04467" />
+                <circle cx="65" cy="40" r="8" fill="#B04467" />
+                <line x1="28" y1="35" x2="42" y2="45" stroke="#2F3F5E" stroke-width="2" />
+                <line x1="72" y1="35" x2="58" y2="45" stroke="#2F3F5E" stroke-width="2" />
+            </svg>
+        </div>
+        <h1>Themis</h1>
+        <p class="tagline">Stay informed about legislation that affects you</p>
+    </div>
 </div>
 
-<div class="subscribe-section">
-    <h2>Subscribe for Alerts</h2>
-    <form id="subscribeForm">
-        <label>
-            <input type="checkbox" name="interest" value="women"> Women's Rights
-        </label>
-        <label>
-            <input type="checkbox" name="interest" value="healthcare"> Healthcare
-        </label>
-        <label>
-            <input type="checkbox" name="interest" value="education"> Education
-        </label>
+<!-- Two Column Layout -->
+<div class="main-grid">
 
-        <button type="button" id="notifyBtn">Enable Notifications</button>
-    </form>
-    <div id="status"></div>
+    <!-- Left Column: Login/Signup -->
+    <div class="auth-section">
+        <div class="card">
+            <h2>Get Started</h2>
+            <p class="card-description">Sign up to receive personalized legislative alerts</p>
+
+            <form class="auth-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                </div>
+
+                <button type="button" class="btn btn-primary">Create Account</button>
+                <p class="form-footer">Already have an account? <a href="#" class="link">Sign in</a></p>
+            </form>
+        </div>
+
+        <!-- Interest Selection -->
+        <div class="card">
+            <h3>Select Your Interests</h3>
+            <p class="card-description">Choose policy areas you want to track</p>
+
+            <div class="interests-list">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="interest" value="women">
+                    <span>Women's Rights</span>
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" name="interest" value="reproductive_rights">
+                    <span>Reproductive Rights</span>
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" name="interest" value="healthcare">
+                    <span>Healthcare</span>
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" name="interest" value="education">
+                    <span>Education</span>
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" name="interest" value="lgbtq_rights">
+                    <span>LGBTQ+ Rights</span>
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" name="interest" value="voting_access">
+                    <span>Voting Access</span>
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" name="interest" value="employment">
+                    <span>Employment</span>
+                </label>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" name="interest" value="criminal_justice">
+                    <span>Criminal Justice</span>
+                </label>
+            </div>
+
+            <button type="button" id="notifyBtn" class="btn btn-secondary">Enable Notifications</button>
+            <div id="status" class="status-message"></div>
+        </div>
+    </div>
+
+    <!-- Right Column: Bills -->
+    <div class="bills-section">
+        <div class="section-header">
+            <h2>Recent Legislation</h2>
+            <p>Bills that may affect your rights and interests</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading legislation...</p>
+        </div>
+
+        <div id="bills-container" class="bills-list"></div>
+    </div>
+
 </div>
 
 <script src="{{ url_for('static', filename='app.js') }}"></script>

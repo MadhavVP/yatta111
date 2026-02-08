@@ -1,40 +1,507 @@
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f4f4f4;
-    color: #333;
+/* ==========================================
+   THEMIS - LEGISLATIVE ALERTS
+   Clean, professional design
+   InnovateHer 2026 Color Palette
+   ========================================== */
+
+:root {
+    --primary: #B04467;
+    --secondary: #2F3F5E;
+    --background: #FCF5E3;
+    --accent: #CBAE51;
+    --text: #272727;
+    --white: #FFFFFF;
+    --gray-light: #F5F5F5;
+    --gray-medium: #E0E0E0;
+    --gray-dark: #666666;
 }
 
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--background);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+/* ==========================================
+   NAVIGATION
+   ========================================== */
+
 nav {
-    background: #333;
-    padding: 1rem;
-    text-align: center;
+    background: var(--secondary);
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 nav a {
-    color: white;
-    margin: 0 15px;
+    color: var(--white);
+    margin-right: 2rem;
     text-decoration: none;
-    font-weight: bold;
+    font-weight: 500;
+    transition: color 0.2s;
 }
 
 nav a:hover {
+    color: var(--accent);
+}
+
+/* ==========================================
+   MAIN CONTAINER
+   ========================================== */
+
+main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* ==========================================
+   HERO
+   ========================================== */
+
+.hero {
+    background: var(--white);
+    border-left: 6px solid var(--accent);
+    padding: 3rem 2rem;
+    margin-bottom: 3rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.logo-container {
+    margin-bottom: 1.5rem;
+}
+
+.logo-icon {
+    display: inline-block;
+}
+
+.hero h1 {
+    color: var(--secondary);
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.hero .tagline {
+    color: var(--gray-dark);
+    font-size: 1.2rem;
+}
+
+/* ==========================================
+   MAIN GRID LAYOUT
+   ========================================== */
+
+.main-grid {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================
+   CARDS
+   ========================================== */
+
+.card {
+    background: var(--white);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-top: 4px solid var(--primary);
+}
+
+.card h2,
+.card h3 {
+    color: var(--secondary);
+    margin-bottom: 0.5rem;
+}
+
+.card h2 {
+    font-size: 1.5rem;
+}
+
+.card h3 {
+    font-size: 1.2rem;
+}
+
+.card-description {
+    color: var(--gray-dark);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ==========================================
+   FORMS
+   ========================================== */
+
+.auth-form {
+    margin-top: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--secondary);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--gray-medium);
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    background: var(--white);
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.form-footer {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: var(--gray-dark);
+}
+
+.link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.link:hover {
     text-decoration: underline;
 }
 
-main {
-    padding: 2rem;
-    background: white;
-    margin: 2rem auto;
-    max-width: 800px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+/* ==========================================
+   BUTTONS
+   ========================================== */
+
+.btn {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
 }
+
+.btn-primary {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background: #8a3552;
+}
+
+.btn-secondary {
+    background: var(--secondary);
+    color: var(--white);
+}
+
+.btn-secondary:hover {
+    background: #1f2a3e;
+}
+
+/* ==========================================
+   INTERESTS CHECKBOXES
+   ========================================== */
+
+.interests-list {
+    margin: 1.5rem 0;
+}
+
+.checkbox-label {
+    display: block;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: var(--gray-light);
+    border-left: 3px solid var(--gray-medium);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.checkbox-label:hover {
+    background: var(--white);
+    border-left-color: var(--accent);
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-right: 0.75rem;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"]:checked+span {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.checkbox-label:has(input:checked) {
+    background: var(--white);
+    border-left-color: var(--primary);
+    border-left-width: 4px;
+}
+
+.status-message {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.status-message:not(:empty) {
+    background: var(--background);
+    border-left: 4px solid var(--accent);
+}
+
+/* ==========================================
+   BILLS SECTION
+   ========================================== */
+
+.section-header {
+    background: var(--white);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border-left: 6px solid var(--secondary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.section-header h2 {
+    color: var(--secondary);
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.section-header p {
+    color: var(--gray-dark);
+    font-size: 1rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 3rem;
+    background: var(--white);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--gray-medium);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading p {
+    color: var(--gray-dark);
+    font-size: 0.95rem;
+}
+
+/* ==========================================
+   BILL CARDS
+   ========================================== */
+
+.bills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.bill-card {
+    background: var(--white);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.bill-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.bill-header {
+    background: var(--secondary);
+    color: var(--white);
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 1rem;
+}
+
+.bill-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0;
+    flex: 1;
+}
+
+.bill-id {
+    background: var(--accent);
+    color: var(--secondary);
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.bill-summary {
+    padding: 1.5rem;
+    color: var(--text);
+    line-height: 1.7;
+    border-left: 4px solid var(--background);
+}
+
+.bill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0 1.5rem 1rem 1.5rem;
+}
+
+.tag {
+    background: var(--background);
+    color: var(--secondary);
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid var(--accent);
+}
+
+.bill-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--gray-light);
+    border-top: 1px solid var(--gray-medium);
+}
+
+.bill-state {
+    background: var(--secondary);
+    color: var(--white);
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.bill-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.bill-link:hover {
+    text-decoration: underline;
+}
+
+/* ==========================================
+   FOOTER
+   ========================================== */
 
 footer {
     text-align: center;
-    padding: 1rem;
-    background: #ddd;
-    margin-top: 2rem;
+    padding: 2rem;
+    background: var(--secondary);
+    color: var(--white);
+    margin-top: 4rem;
+}
+
+footer p {
+    margin: 0.5rem 0;
+}
+
+footer a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+/* ==========================================
+   ERROR STATES
+   ========================================== */
+
+.no-bills {
+    text-align: center;
+    padding: 3rem;
+    background: var(--white);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    color: var(--gray-dark);
+}
+
+.error {
+    text-align: center;
+    padding: 2rem;
+    background: var(--white);
+    border-left: 4px solid var(--primary);
+    color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+
+@media (max-width: 768px) {
+    main {
+        padding: 1rem;
+    }
+
+    .hero {
+        padding: 2rem 1rem;
+    }
+
+    .hero h1 {
+        font-size: 2rem;
+    }
+
+    .bill-header {
+        flex-direction: column;
+    }
+
+    .card {
+        padding: 1.5rem;
+    }
 }

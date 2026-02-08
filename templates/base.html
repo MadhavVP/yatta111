@@ -4,20 +4,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}legislative-branch{% endblock %}</title>
+    <meta name="description" content="Themis - Stay informed about legislation that affects you">
+    <title>{% block title %}Themis - Legislative Alerts{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!-- Favicon -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect x=%2210%22 y=%2260%22 width=%2280%22 height=%228%22 fill=%22%23CBAE51%22/><rect x=%2245%22 y=%2220%22 width=%2210%22 height=%2248%22 fill=%22%232F3F5E%22/><circle cx=%2235%22 cy=%2240%22 r=%228%22 fill=%22%23B04467%22/><circle cx=%2265%22 cy=%2240%22 r=%228%22 fill=%22%23B04467%22/></svg>">
 </head>
 
 <body>
     <nav>
         <a href="/">Home</a>
-        <a href="/contact">Contact</a>
+        <a href="/#bills">Legislation</a>
+        <a href="/about">About</a>
     </nav>
+
     <main>
-        {% block content %}{% endblock %}
+        {% block content %}
+        {% endblock %}
     </main>
+
     <footer>
-        <p>&copy; 2024 legislative-branch</p>
+        <p><strong>Themis</strong> - Legislative Alert System</p>
+        <p>Created for InnovateHer 2026 at Purdue University</p>
+        <p style="opacity: 0.7; font-size: 0.9rem; margin-top: 1rem;">
+            Named after Themis, Greek goddess of divine law and justice
+        </p>
     </footer>
 </body>
 
