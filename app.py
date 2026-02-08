@@ -15,6 +15,13 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
+@app.route('/sw.js')
+def service_worker():
+    from flask import send_from_directory
+    response = send_from_directory('static', 'sw.js')
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
+
 @app.route('/api/subscribe', methods=['POST'])
 def subscribe():
     """
@@ -50,7 +57,7 @@ def get_vapid_key():
     """
     Returns the public VAPID key for the frontend.
     """
-    public_key = os.getenv("VAPID_PUBLIC_KEY")
+    public_key = os.getenv("PUBLIC_KEY")
     if not public_key:
          # Fallback for demo if keys aren't generated yet
         return jsonify({"error": "VAPID key not configured"}), 500
