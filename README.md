@@ -34,8 +34,6 @@ Once your virtual environment is active (you should see `(venv)` in your termina
 pip install -r requirements.txt
 ```
 
-*(Note: If `requirements.txt` doesn't exist yet, run `pip install flask apscheduler pymongo pywebpush python-dotenv requests`)*
-
 ### 4. Environment Configuration
 
 Create a `.env` file in the root directory. You can copy the example:
