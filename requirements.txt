@@ -4,3 +4,6 @@ pymongo
 pywebpush
 python-dotenv
 requests
+flask-cors
+beautifulsoup4
+selenium

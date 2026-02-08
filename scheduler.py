@@ -1,8 +1,8 @@
-# scheduler.py - Fixed version that tries to combine both
-import threading
+"""
+Scheduler module - orchestrates the legislative alert pipeline
+Runs in background without blocking Flask server startup
+"""
 import time
-import os
-from pymongo import MongoClient  
 from apscheduler.schedulers.background import BackgroundScheduler
 import scraper
 import ai_processor
@@ -10,36 +10,40 @@ import database
 import notifications
 import atexit
 
+
 def orchestrate_pipeline():
     """
-    Pipeline execution - Bill-first approach (more efficient)
+    Main pipeline: Fetch bills -> Process -> Notify users
+    This function is CALLED by the scheduler, not run on import!
     """
-    print("\n[Scheduler] Beginning new legislation check")
+    print("\n[Scheduler] === Starting legislation check ===")
     
     try:
         # 1. Fetch NEW bills from APIs (Nathan's code)
+        print("[Scheduler] Fetching new bills...")
         new_bills = scraper.fetch_new_bills()
         
         if not new_bills:
             print("[Scheduler] No new bills found")
             return
         
-        print(f"[Scheduler] Found {len(new_bills)} new bills")
+        print(f"[Scheduler] Found {len(new_bills)} new bills to process")
         
-        # 2. Process each NEW bill
+        # 2. Process each bill
         for bill in new_bills:
             bill_id = bill.get('id')
+            print(f"[Scheduler] Processing bill {bill_id}: {bill.get('title')}")
             
-            # Get bill text
+            # Get full bill text
             bill_text = bill.get('text', '') or scraper.get_bill_text(bill_id)
             
-            # Process with AI (Gabe's code)
+            # AI processing (Gabe's code)
             summary = ai_processor.summarize(bill_text)
             tags = ai_processor.extract_tags(bill_text)
             
-            print(f"[Scheduler] Bill {bill_id} tags: {tags}")
+            print(f"[Scheduler]   Tags: {tags}")
             
-            # Prepare full bill data
+            # Prepare complete bill data
             full_bill_data = {
                 "id": bill_id,
                 "title": bill.get('title'),
@@ -52,21 +56,21 @@ def orchestrate_pipeline():
                 "processed_at": time.time()
             }
             
-            # Save to database (Madhav's database.py)
+            # Save to database (Madhav's code)
             if not database.save_bill(full_bill_data):
-                print(f"[Scheduler] Bill {bill_id} already exists, skipping")
+                print(f"[Scheduler]   Bill {bill_id} already exists, skipping")
                 continue
             
-            # Find users interested in these tags (Madhav's database.py)
+            # Find users interested in these tags
             matching_subscriptions = database.find_matching_users(tags)
             
             if not matching_subscriptions:
-                print(f"[Scheduler] No matching users for bill {bill_id}")
+                print(f"[Scheduler]   No matching users for bill {bill_id}")
                 continue
             
-            print(f"[Scheduler] Found {len(matching_subscriptions)} users for bill {bill_id}")
+            print(f"[Scheduler]   Notifying {len(matching_subscriptions)} users")
             
-            # Notify each matching user (Sophia's notifications.py)
+            # Create notification payload
             notification_payload = {
                 "title": f"New Legislation: {bill.get('title')}",
                 "body": summary[:200],
@@ -74,24 +78,29 @@ def orchestrate_pipeline():
                 "data": {"bill_id": bill_id, "tags": tags}
             }
             
+            # Send notifications (Sophia's code)
             for subscription in matching_subscriptions:
-                notifications.send_web_push(subscription, notification_payload)
+                try:
+                    notifications.send_web_push(subscription, notification_payload)
+                except Exception as e:
+                    print(f"[Scheduler]   Failed to notify user: {e}")
         
-        print("[Scheduler] Ending new legislation check\n")
+        print("[Scheduler] === Legislation check complete ===\n")
         
     except Exception as e:
-        print(f"[Scheduler] Error in pipeline: {e}")
+        print(f"[Scheduler] ERROR in pipeline: {e}")
         import traceback
         traceback.print_exc()
 
 
 def start_scheduler():
     """
-    Start background scheduler with APScheduler (more reliable than while True)
+    Start the background scheduler using APScheduler
+    This runs in a separate thread and won't block Flask
     """
     scheduler = BackgroundScheduler()
     
-    # Run every 30 minutes
+    # Schedule the pipeline to run every 30 minutes
     scheduler.add_job(
         func=orchestrate_pipeline,
         trigger="interval",
@@ -100,10 +109,14 @@ def start_scheduler():
         replace_existing=True
     )
     
+    # Start the scheduler
     scheduler.start()
-    print("[Scheduler] Background scheduler started (runs every 30 mins)")
+    print("[Scheduler] ✓ Background scheduler started (runs every 30 minutes)")
     
-    # Graceful shutdown
+    # Ensure scheduler shuts down gracefully when app closes
     atexit.register(lambda: scheduler.shutdown())
+    
+    # Optional: Run once immediately on startup
+    # orchestrate_pipeline()
     
     return scheduler

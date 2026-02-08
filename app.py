@@ -73,9 +73,7 @@ def get_feed():
     sector = request.args.get('sector')
     state = request.args.get('state')
     
-    # In a real app, use sector and state to filter.
-    # For now, we return all matching bills or a mock list if DB is empty.
-    
+    # Get bills from database
     bills = database.get_all_bills()
     
     # If no bills in DB, return mock data for demonstration
@@ -120,13 +118,24 @@ def get_feed():
 
 
 if __name__ == '__main__':
-    # Start the scheduler
-    # In production with uWSGI/Gunicorn, this needs careful handling.
-    # For hackathon/dev server, this is fine.
-    if not os.environ.get("WERKZEUG_RUN_MAIN") == "true": # Prevent double run with reloader
-        pass 
+    # Only run initialization once (Flask debug mode runs code twice)
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        # This is the reloader process - skip initialization
+        pass
+    else:
+        # First run - do initialization
+        print("\n[Startup] Initializing Themis Legislative Alert System...")
+        
+        # Run pipeline ONCE on startup to populate database
+        print("[Startup] Fetching initial bills to populate database...")
+        my_scheduler.orchestrate_pipeline()
+        
+        # Start background scheduler for future updates
+        print("[Startup] Starting background scheduler...")
+        my_scheduler.start_scheduler()
+        
+        print("[Startup] Initialization complete!\n")
     
-    # Actually, let's just start it. content of scheduler.py handles the start.
-    my_scheduler.start_scheduler()
-    
-    app.run(debug=True, port=5000)
+    # Start Flask server
+    print("[Flask] Starting server on http://127.0.0.1:8000")
+    app.run(debug=True, port=8000)
